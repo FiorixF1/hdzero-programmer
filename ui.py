@@ -16,6 +16,60 @@ import zipfile
 version = "1.0.2"
 
 
+def getFirmwareFromCRC(crc):
+    crc_list = {
+        "0x6995": "hdzero_freestyle @ 1.0.0",
+        "0x565b": "hdzero_race_v1 @ 1.0.0",
+        "0x565f": "hdzero_race_v2 @ 1.0.0",
+        "0x586a": "hdzero_whoop @ 1.0.0",
+        "0xebf2": "hdzero_whoop_lite @ 1.0.0",
+        "0x41b0": "hdzero_freestyle @ 1.1.0",
+        "0x9df6": "hdzero_race_v1 @ 1.1.0",
+        "0x9dfa": "hdzero_race_v2 @ 1.1.0",
+        "0x772a": "hdzero_whoop @ 1.1.0",
+        "0x4acd": "hdzero_whoop_lite @ 1.1.0",
+        "0xa0fc": "hdzero_freestyle @ 1.2.0",
+        "0xc129": "hdzero_race_v1 @ 1.2.0",
+        "0xc12d": "hdzero_race_v2 @ 1.2.0",
+        "0x65a0": "hdzero_whoop @ 1.2.0",
+        "0x14a4": "hdzero_whoop_lite @ 1.2.0",
+        "0x55db": "foxeer_vtx @ 1.3.0",
+        "0x1dc6": "hdzero_freestyle @ 1.3.0",
+        "0x5423": "hdzero_race_v1 @ 1.3.0",
+        "0x5427": "hdzero_race_v2 @ 1.3.0",
+        "0x742b": "hdzero_race_v3 @ 1.3.0",
+        "0x3a0e": "hdzero_whoop @ 1.3.0",
+        "0xee00": "hdzero_whoop_lite @ 1.3.0",
+        "0x61b0": "foxeer_vtx @ 1.4.0",
+        "0x19be": "hdzero_freestyle @ 1.4.0",
+        "0x5e46": "hdzero_race_v1 @ 1.4.0",
+        "0x3ff8": "hdzero_race_v2 @ 1.4.0",
+        "0x613a": "hdzero_race_v3 @ 1.4.0",
+        "0xc3a1": "hdzero_whoop @ 1.4.0",
+        "0xe5b8": "hdzero_whoop_lite @ 1.4.0",
+        "0xc8ea": "foxeer_vtx @ 1.5.0",
+        "0x8697": "hdzero_freestyle @ 1.5.0",
+        "0x7b82": "hdzero_freestyle_v2 @ 1.5.0",
+        "0xc5f4": "hdzero_race_v1 @ 1.5.0",
+        "0x64db": "hdzero_race_v2 @ 1.5.0",
+        "0x6ee0": "hdzero_race_v3 @ 1.5.0",
+        "0x4200": "hdzero_whoop @ 1.5.0",
+        "0xb954": "hdzero_whoop_lite @ 1.5.0",
+        "0x6d7e": "foxeer_vtx @ 1.5.0-CITA",
+        "0x6e61": "hdzero_race_v1 @ 1.5.0-CITA",
+        "0x3af9": "hdzero_race_v2 @ 1.5.0-CITA",
+        "0xf58b": "hdzero_race_v3 @ 1.5.0-CITA",
+        "0x4a4e": "hdzero_whoop @ 1.5.0-CITA",
+        "0xed83": "hdzero_whoop_lite @ 1.5.0-CITA"
+    }
+    if crc in crc_list:
+        if crc_list[crc].endswith("CITA"):
+            return crc_list[crc] + "\nFirmware is valid"
+        else:
+            return crc_list[crc] + "\nFirmware is NOT valid"
+    else:
+        return "Unknown firmware" + "\nFirmware is NOT valid"
+
 class MyGUI:
     def __init__(self, master):
         self.master = master
@@ -61,7 +115,7 @@ class MyGUI:
         self.create_progressbar()
 
     def create_root_window(self):
-        titleString = "HDZero Programmer"+" v"+version
+        titleString = "HDZero Programmer"+" v"+version+" CITA"
         windowX = 450
         windowY = 170
         offsetX = (self.master.winfo_screenwidth() - windowX)/2
@@ -377,6 +431,7 @@ class MyGUI:
                             self.target_combobox.current(j)
                             self.vtx_name_select = i
                             self.vtx_index_select = j
+            self.create_window(getFirmwareFromCRC("0x"+hex(ch341.read_crc)[2:].ljust(4, '0')))
             self.ch341Command = 0
         elif self.ch341Command == 2:
             if ch341.command == 0:
