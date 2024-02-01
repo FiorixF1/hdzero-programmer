@@ -24,4 +24,4 @@ sudo apt-get install python3-tk python3-pil.imagetk python3-wget
 
 `sudo chmod 777 /dev/ch341_pis0`
 
-### Run HDZeroVTXProgrammer.py
+### Run HDZeroProgrammer.py

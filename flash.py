@@ -84,7 +84,7 @@ def flash_erase_block64(ch341):
     ch341.set_stream(1)
 
 
-def flash_earse_section(ch341, addr):
+def flash_erase_section(ch341, addr):
     ch341.iobuffer[0] = 0x20
     ch341.iobuffer[1] = (addr >> 16) & 0x1f
     ch341.iobuffer[2] = (addr >> 8) & 0x1f
@@ -126,7 +126,7 @@ def flash_erase(ch341):
     flash_write_disable(ch341)
 
     flash_write_enable(ch341)
-    flash_earse_section(ch341, 65536)
+    flash_erase_section(ch341, 65536)
     flash_wait_busy(ch341)
     flash_write_disable(ch341)
 
@@ -181,14 +181,15 @@ def flash_write_file(ch341):
         flash_wait_busy(ch341)
 
 
-def flash_read_file(ch341):
+def flash_read_file(ch341, size=0):
     global pageNum
 
     ch341.precent = 50
     ch341.read_crc = 0
 
-    for page in range(pageNum):
-        ch341.percent = 50 + int(page * 100 / pageNum)/2 + 1
+    if size == 0: size = pageNum
+    for page in range(size):
+        ch341.percent = 50 + int(page * 100 / size)/2 + 1
         # print(ch341.percent)
 
         baseAddress = page << 8

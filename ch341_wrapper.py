@@ -202,10 +202,11 @@ def ch341ThreadProc():
 
     while True:
         ch341.dev_connect()
-        flash_connect(ch341)  
+        flash_connect(ch341)
         if ch341.command == 1:
             flash_read_vtx_id(ch341)
             ch341.vtx_id = int.from_bytes(ch341.iobuffer[4], byteorder='big')
+            flash_read_file(ch341, 256)
             ch341.command = 0
         elif ch341.command == 2:
             ch341.success = 0
