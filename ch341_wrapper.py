@@ -26,6 +26,7 @@ class ch341_class_windows(object):
         self.write_crc = 0
         self.read_crc = 0
         self.success = 0
+        self.crc_table = dict()
 
         try:
             self.dll = cdll.LoadLibrary(self.dll_path)
@@ -96,6 +97,7 @@ class ch341_class_linux(object):
         self.write_crc = 0
         self.read_crc = 0
         self.success = 0
+        self.crc_table = dict()
 
         try:
             self.dll = cdll.LoadLibrary(self.dll_path)

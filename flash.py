@@ -1,4 +1,5 @@
 import time
+import zlib
 from Download import *
 
 pageNum = 0
@@ -186,6 +187,10 @@ def flash_read_file(ch341, size=0):
 
     ch341.precent = 50
     ch341.read_crc = 0
+    ch341.crc_table = dict()
+
+    buffer = bytes()
+    dump = open('dump.bin', 'wb')
 
     if size == 0: size = pageNum
     for page in range(size):
@@ -208,3 +213,8 @@ def flash_read_file(ch341, size=0):
             ch341.read_crc += int.from_bytes(
                 ch341.iobuffer[4 + i], byteorder='big')
             ch341.read_crc &= 0xffff
+            buffer += ch341.iobuffer[4 + i]
+        ch341.crc_table[page+1] = "0x"+hex(zlib.crc32(buffer) & 0xffffffff)[2:].rjust(8, '0')
+
+    dump.write(buffer)
+    dump.close()
