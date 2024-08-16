@@ -296,7 +296,7 @@ class MyGUI:
                 self._statusbar_frame.label_hidden()
                 self._statusbar_frame.progress_bar_set_value(0)
 
-    def getFirmwareFromCRC(crc_table):
+    def get_firmware_from_CRC(self, crc_table):
         for firmware, metadata in my_parse.crc_database.items():
             if crc_table[metadata["pageNum"]] in metadata["read_crc"]:
                 if firmware.endswith("CITA"):
@@ -313,7 +313,7 @@ class MyGUI:
                 # just do it in the main thread, code is too messy to do better
                 if my_ch341.connect_vtx() == 1:
                     my_ch341.flash_read_file()
-                    self._statusbar_frame.status_label_set_text(*getFirmwareFromCRC(my_ch341.crc_table))
+                    self._statusbar_frame.status_label_set_text(*self.get_firmware_from_CRC(my_ch341.crc_table))
                 else:
                     self._statusbar_frame.status_label_set_text(
                         "VTX not found. Check connection", "red")
