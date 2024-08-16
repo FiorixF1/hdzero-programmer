@@ -43,15 +43,19 @@ class frame_programmer:
 
         self.update_button = tk.Button(self._frame)
         self.update_button.grid(row=1, column=2, padx=5, pady=5)
-
         self.update_button_set_text_update("VTX")
         self.update_button_disable()
+
+        self.detect_button = tk.Button(self._frame)
+        self.detect_button.grid(row=1, column=3, padx=5, pady=5)
+        self.detect_button["text"] = "Detect VTX"
+        self.detect_button_disable()
 
     def frame(self):
         return self._frame
 
     def version_combobox_set_default(self):
-        self.version_combobox.set("Load Online Fiwmare")
+        self.version_combobox.set("Load Online Firmware")
 
     def version_combobox_disable(self):
         self.version_combobox["state"] = "disabled"
@@ -131,6 +135,14 @@ class frame_programmer:
             with open("resource/local_path", "w") as file:
                 file.write(path)
                 file.close()
+
+    def detect_button_disable(self):
+        self.detect_button["state"] = "disabled"
+        self.detect_button["bg"] = "SystemButtonFace"
+
+    def detect_button_enable(self):
+        self.detect_button["state"] = "normal"
+        self.detect_button["bg"] = "SystemButtonFace"
 
     def update_button_disable(self):
         self.update_button["state"] = "disabled"

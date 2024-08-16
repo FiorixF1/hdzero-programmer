@@ -1,4 +1,5 @@
 import ctypes
+import zlib
 import time
 import sys
 import os
@@ -298,6 +299,37 @@ class ch341_class(object):
             self.read_crc += int.from_bytes(
                 self.iobuffer[4 + i], byteorder='little')
 
+    def flash_read_file(self):
+        self.read_crc = 0
+        self.crc_table = dict()
+
+        buffer = bytes()
+        dump = open('dump.bin', 'wb')
+
+        for page in range(256):
+            baseAddress = page << 8
+
+            self.iobuffer[0] = 0x03
+            self.iobuffer[1] = (baseAddress >> 16) & 0xff
+            self.iobuffer[2] = (baseAddress >> 8) & 0xff
+            self.iobuffer[3] = baseAddress & 0xff
+            self.iobuffer[4] = 0x00
+            self.ilength = 260
+
+            self.set_stream(0)
+            self.stream_spi4()
+            self.set_stream(1)
+
+            for i in range(0, 256):
+                self.read_crc += int.from_bytes(
+                    self.iobuffer[4 + i], byteorder='big')
+                self.read_crc &= 0xffff
+                buffer += self.iobuffer[4 + i]
+            self.crc_table[page+1] = "0x"+hex(zlib.crc32(buffer) & 0xffffffff)[2:].rjust(8, '0')
+
+        dump.write(buffer)
+        dump.close()
+
     def connect_vtx(self):
         if self.dll.CH341OpenDevice(0) < 0:
             return 0
@@ -313,6 +345,21 @@ class ch341_class(object):
                     return 1
 
             return 0
+
+    def flash_read_target_id(self):
+        raddr = 0x10000
+        self.iobuffer[0] = 0x03
+        self.iobuffer[1] = (raddr >> 16) & 0xff
+        self.iobuffer[2] = (raddr >> 8) & 0xff
+        self.iobuffer[3] = raddr & 0xff
+        self.iobuffer[4] = 0x00
+        self.ilength = 16
+
+        self.set_stream(0)
+        self.stream_spi4()
+        self.set_stream(1)
+
+        return int.from_bytes(self.iobuffer[4], byteorder='big')
 
     def flash_write_target_id(self):
         self.flash_write_enable()

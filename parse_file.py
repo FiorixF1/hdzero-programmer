@@ -5,6 +5,7 @@ from PIL import Image
 class parse:
     def __init__(self):
         self.vtx_releases_path = "resource/vtx_releases"
+        self.vtx_cita_releases_path = "resource/vtx_cita_releases"
         self.vtx_common_path = "resource/vtx_common"
         self.event_vrx_releases_path = "resource/event_vrx_releases"
         self.monitor_releases_path = "resource/monitor_releases"
@@ -61,6 +62,28 @@ class parse:
                     version = data[i]['tag_name']
                     url = data[i]['assets'][j]['browser_download_url']
                     self.vtx_info[name][version] = url
+
+            with open(self.vtx_cita_releases_path) as f:
+                data = json.load(f)
+
+            for i in range(len(data)):
+                link_list = []
+                name_list = []
+                for j in range(len(data[i]['assets'])):
+                    link_list.append(data[i]['assets'][j]
+                                     ['browser_download_url'])
+
+                    name_start = link_list[j].rfind('/') + len('/')
+                    name_end = link_list[j].index(".zip", name_start)
+                    name_list.append(link_list[j][name_start:name_end])
+                    name = link_list[j][name_start:name_end]
+                    if name == "hdzero_freestyle":
+                        name = "hdzero_freestyle_v1"
+
+                    version = data[i]['name']  # do not use tag_name here
+                    url = data[i]['assets'][j]['browser_download_url']
+                    self.vtx_info[name][version] = url
+
             return 1
         except:
             return 0

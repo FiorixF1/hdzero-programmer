@@ -20,6 +20,257 @@ from icon32 import icon32
 import io
 
 
+
+def getFirmwareFromCRC(crc_table):
+    firmware_list = {
+        "hdzero_freestyle_v1 @ 1.0.0": {
+            "pageNum": 187,
+            "read_crc": "0x2c7871ad",
+        },
+        "hdzero_race_v1 @ 1.0.0": {
+            "pageNum": 183,
+            "read_crc": "0xed18964a",
+        },
+        "hdzero_race_v2 @ 1.0.0": {
+            "pageNum": 183,
+            "read_crc": "0xf88dc480",
+        },
+        "hdzero_whoop @ 1.0.0": {
+            "pageNum": 172,
+            "read_crc": "0xa9649ace",
+        },
+        "hdzero_whoop_lite @ 1.0.0": {
+            "pageNum": 182,
+            "read_crc": "0xaeed4934",
+        },
+        "hdzero_freestyle_v1 @ 1.1.0": {
+            "pageNum": 188,
+            "read_crc": "0xa36937e4",
+        },
+        "hdzero_race_v1 @ 1.1.0": {
+            "pageNum": 184,
+            "read_crc": "0xb3c0e07a",
+        },
+        "hdzero_race_v2 @ 1.1.0": {
+            "pageNum": 184,
+            "read_crc": "0x153f831e",
+        },
+        "hdzero_whoop @ 1.1.0": {
+            "pageNum": 172,
+            "read_crc": "0x98ba4b29",
+        },
+        "hdzero_whoop_lite @ 1.1.0": {
+            "pageNum": 183,
+            "read_crc": "0x30758bc7",
+        },
+        "hdzero_freestyle_v1 @ 1.2.0": {
+            "pageNum": 195,
+            "read_crc": "0xc31a3596",
+        },
+        "hdzero_race_v1 @ 1.2.0": {
+            "pageNum": 191,
+            "read_crc": "0x4b4d7aeb",
+        },
+        "hdzero_race_v2 @ 1.2.0": {
+            "pageNum": 191,
+            "read_crc": "0x5d6d7f88",
+        },
+        "hdzero_whoop @ 1.2.0": {
+            "pageNum": 180,
+            "read_crc": "0xa97b865d",
+        },
+        "hdzero_whoop_lite @ 1.2.0": {
+            "pageNum": 190,
+            "read_crc": "0x90957a34",
+        },
+        "foxeer_vtx @ 1.3.0": {
+            "pageNum": 195,
+            "read_crc": "0x47be5d3a",
+        },
+        "hdzero_freestyle_v1 @ 1.3.0": {
+            "pageNum": 200,
+            "read_crc": "0xdc45f45f",
+        },
+        "hdzero_race_v1 @ 1.3.0": {
+            "pageNum": 195,
+            "read_crc": "0x1c4220a0",
+        },
+        "hdzero_race_v2 @ 1.3.0": {
+            "pageNum": 195,
+            "read_crc": "0x1207d32d",
+        },
+        "hdzero_race_v3 @ 1.3.0": {
+            "pageNum": 190,
+            "read_crc": "0x0894030d",
+        },
+        "hdzero_whoop @ 1.3.0": {
+            "pageNum": 184,
+            "read_crc": "0xf2297c3f",
+        },
+        "hdzero_whoop_lite @ 1.3.0": {
+            "pageNum": 195,
+            "read_crc": "0x4a873a8b",
+        },
+        "foxeer_vtx @ 1.4.0": {
+            "pageNum": 200,
+            "read_crc": "0x2b758ebd",
+        },
+        "hdzero_freestyle_v1 @ 1.4.0": {
+            "pageNum": 205,
+            "read_crc": "0xdbb9c87f",
+        },
+        "hdzero_race_v1 @ 1.4.0": {
+            "pageNum": 200,
+            "read_crc": "0xa3ca64bd",
+        },
+        "hdzero_race_v2 @ 1.4.0": {
+            "pageNum": 199,
+            "read_crc": "0x40a5716b",
+        },
+        "hdzero_race_v3 @ 1.4.0": {
+            "pageNum": 195,
+            "read_crc": "0xa9925181",
+        },
+        "hdzero_whoop @ 1.4.0": {
+            "pageNum": 189,
+            "read_crc": "0x69bdd828",
+        },
+        "hdzero_whoop_lite @ 1.4.0": {
+            "pageNum": 200,
+            "read_crc": "0x785b02f5",
+        },
+        "foxeer_vtx @ 1.5.0": {
+            "pageNum": 207,
+            "read_crc": "0xed2133b3",
+        },
+        "hdzero_freestyle_v1 @ 1.5.0": {
+            "pageNum": 212,
+            "read_crc": "0xfad37aba",
+        },
+        "hdzero_freestyle_v2 @ 1.5.0": {
+            "pageNum": 213,
+            "read_crc": "0xfe479852",
+        },
+        "hdzero_race_v1 @ 1.5.0": {
+            "pageNum": 207,
+            "read_crc": "0xdfe1f8d4",
+        },
+        "hdzero_race_v2 @ 1.5.0": {
+            "pageNum": 207,
+            "read_crc": "0x602030a7",
+        },
+        "hdzero_race_v3 @ 1.5.0": {
+            "pageNum": 201,
+            "read_crc": "0xc31605fd",
+        },
+        "hdzero_whoop @ 1.5.0": {
+            "pageNum": 197,
+            "read_crc": "0x855da136",
+        },
+        "hdzero_whoop_lite @ 1.5.0": {
+            "pageNum": 207,
+            "read_crc": "0x7f1a74be",
+        },
+        "foxeer_vtx @ 1.5.0-CITA": {
+            "pageNum": 195,
+            "read_crc": "0x1b06017f",
+        },
+        "hdzero_race_v1 @ 1.5.0-CITA": {
+            "pageNum": 195,
+            "read_crc": "0x815fb9a6",
+        },
+        "hdzero_race_v2 @ 1.5.0-CITA": {
+            "pageNum": 194,
+            "read_crc": "0x9c95b6c1",
+        },
+        "hdzero_race_v3 @ 1.5.0-CITA": {
+            "pageNum": 195,
+            "read_crc": "0xe966412a",
+        },
+        "hdzero_whoop @ 1.5.0-CITA": {
+            "pageNum": 195,
+            "read_crc": "0x193c4a95",
+        },
+        "hdzero_whoop_lite @ 1.5.0-CITA": {
+            "pageNum": 195,
+            "read_crc": "0xc6162081",
+        },
+        "foxeer_vtx @ 1.6.0": {
+            "pageNum": 211,
+            "read_crc": "0x423442ff",
+        },
+        "hdzero_freestyle_v1 @ 1.6.0": {
+            "pageNum": 217,
+            "read_crc": "0x77b98790",
+        },
+        "hdzero_freestyle_v2 @ 1.6.0": {
+            "pageNum": 217,
+            "read_crc": "0xfb169c46",
+        },
+        "hdzero_race_v1 @ 1.6.0": {
+            "pageNum": 211,
+            "read_crc": "0xfed5cc24",
+        },
+        "hdzero_race_v2 @ 1.6.0": {
+            "pageNum": 211,
+            "read_crc": "0x5dba46c8",
+        },
+        "hdzero_race_v3 @ 1.6.0": {
+            "pageNum": 205,
+            "read_crc": "0xf84d23ee",
+        },
+        "hdzero_whoop @ 1.6.0": {
+            "pageNum": 201,
+            "read_crc": "0x36f37629",
+        },
+        "hdzero_whoop_lite @ 1.6.0": {
+            "pageNum": 212,
+            "read_crc": "0x33d2a0cf",
+        },
+        "hdzero_eco @ 1.6.0": {
+            "pageNum": 203,
+            "read_crc": "0x7bac96fa",
+        },
+        "foxeer_vtx @ 1.6.0-CITA": {
+            "pageNum": 199,
+            "read_crc": "0x259c506a",
+        },
+        "hdzero_race_v1 @ 1.6.0-CITA": {
+            "pageNum": 199,
+            "read_crc": "0xd26986b6",
+        },
+        "hdzero_race_v2 @ 1.6.0-CITA": {
+            "pageNum": 199,
+            "read_crc": "0xc987e009",
+        },
+        "hdzero_race_v3 @ 1.6.0-CITA": {
+            "pageNum": 200,
+            "read_crc": "0xdf1f7aa6",
+        },
+        "hdzero_whoop @ 1.6.0-CITA": {
+            "pageNum": 199,
+            "read_crc": "0x950cd2c5",
+        },
+        "hdzero_whoop_lite @ 1.6.0-CITA": {
+            "pageNum": 200,
+            "read_crc": "0xea7b2fb2",
+        },
+        "hdzero_eco @ 1.6.0-CITA": {
+            "pageNum": 201,
+            "read_crc": "0x6fe85d4f",
+        },
+    }
+    for firmware, metadata in firmware_list.items():
+        if crc_table[metadata["pageNum"]] == metadata["read_crc"]:
+            if firmware.endswith("CITA"):
+                return (firmware + " - Firmware is valid", "green")
+            else:
+                return (firmware + " - Firmware is NOT valid", "red")
+    else:
+        return ("Unknown firmware" + " - Firmware is NOT valid", "red")
+ 
+ 
+ 
 class MyGUI:
 
     def __init__(self, init_window_name):
@@ -88,6 +339,7 @@ class MyGUI:
         self._programmer_frame.online_fw_button["command"] = self._programmer_frame.online_fw_button_hidden
         self._programmer_frame.local_fw_button["command"] = self.on_load_local_firmware
         self._programmer_frame.update_button["command"] = self.on_update
+        self._programmer_frame.detect_button["command"] = self.on_detect
 
     def init_vtx_frame(self):
         self._vtx_frame = frame_vtx(self._tabCtrl)
@@ -129,18 +381,21 @@ class MyGUI:
 
         if self.current_selected_tab() == 0:
             self._programmer_frame.update_button_enable()
+            self._programmer_frame.detect_button_enable()
             self._programmer_frame.url = my_parse.vtx_info[self._vtx_frame.vtx_target.get(
             )][self._programmer_frame.version_combobox.get()]
             self._programmer_frame.online_fw_button_set_str(
                 self._programmer_frame.version_combobox.get())
         elif self.current_selected_tab() == 1:
             self._programmer_frame.update_button_enable()
+            self._programmer_frame.detect_button_disable()
             self._programmer_frame.url = my_parse.monitor_info[self._programmer_frame.version_combobox.get(
             )]
             self._programmer_frame.online_fw_button_set_str(
                 self._programmer_frame.version_combobox.get())
         elif self.current_selected_tab() == 2:
             self._programmer_frame.update_button_enable()
+            self._programmer_frame.detect_button_disable()
             self._programmer_frame.url = my_parse.event_vrx_info[self._programmer_frame.version_combobox.get(
             )]
             self._programmer_frame.online_fw_button_set_str(
@@ -156,15 +411,18 @@ class MyGUI:
         if self.current_selected_tab() == 0:
             self._programmer_frame.mode = 1
             self._programmer_frame.update_button_enable()
+            self._programmer_frame.detect_button_enable()
             my_ch341.fw_path = self._programmer_frame.local_file_path
 
         elif self.current_selected_tab() == 1:
             self._programmer_frame.update_button_enable()
+            self._programmer_frame.detect_button_disable()
             self._programmer_frame.mode = 1
             my_ch341.fw_path = self._programmer_frame.local_file_path
 
         elif self.current_selected_tab() == 2:
             self._programmer_frame.update_button_enable()
+            self._programmer_frame.detect_button_disable()
             self._programmer_frame.mode = 1
             my_ch341.fw_path = self._programmer_frame.local_file_path
 
@@ -182,6 +440,7 @@ class MyGUI:
                 # self._programmer_frame.update_button_disable()
                 self._programmer_frame.update_button_set_text_cancel()
                 self._programmer_frame.update_button_enable()
+                self._programmer_frame.detect_button_disable()
                 self._programmer_frame.version_combobox_disable()
                 self._programmer_frame.local_fw_button_disable()
                 self._programmer_frame.online_fw_button_disable()
@@ -199,6 +458,7 @@ class MyGUI:
 
                 self._programmer_frame.update_button_set_text_update("VTX")
                 self._programmer_frame.update_button_enable()
+                self._programmer_frame.detect_button_enable()
                 self._programmer_frame.version_combobox_enable()
                 self._programmer_frame.local_fw_button_enable()
                 self._programmer_frame.online_fw_button_enable(
@@ -220,6 +480,7 @@ class MyGUI:
 
                 self._programmer_frame.update_button_set_text_cancel()
                 self._programmer_frame.update_button_enable()
+                self._programmer_frame.detect_button_disable()
                 self._programmer_frame.version_combobox_disable()
                 self._programmer_frame.local_fw_button_disable()
                 self._programmer_frame.online_fw_button_disable()
@@ -242,6 +503,7 @@ class MyGUI:
                 self._programmer_frame.update_button_set_text_update(
                     "Monitor")
                 self._programmer_frame.update_button_enable()
+                self._programmer_frame.detect_button_disable()
                 self._programmer_frame.version_combobox_enable()
                 self._programmer_frame.local_fw_button_enable()
                 self._programmer_frame.online_fw_button_enable(
@@ -259,6 +521,7 @@ class MyGUI:
 
                 self._programmer_frame.update_button_set_text_cancel()
                 self._programmer_frame.update_button_enable()
+                self._programmer_frame.detect_button_disable()
                 self._programmer_frame.version_combobox_disable()
                 self._programmer_frame.local_fw_button_disable()
                 self._programmer_frame.online_fw_button_disable()
@@ -274,6 +537,7 @@ class MyGUI:
                 self._programmer_frame.update_button_set_text_update(
                     "Event VRX")
                 self._programmer_frame.update_button_disable()
+                self._programmer_frame.detect_button_disable()
                 self._programmer_frame.version_combobox_enable()
                 self._programmer_frame.local_fw_button_enable()
                 self._programmer_frame.online_fw_button_enable(
@@ -281,6 +545,18 @@ class MyGUI:
 
                 self._statusbar_frame.label_hidden()
                 self._statusbar_frame.progress_bar_set_value(0)
+
+    def on_detect(self):
+        if self.current_selected_tab() == 0:
+
+            if self._programmer_frame.is_cancel == 0:
+                # just do it in the main thread, code is too messy to do better
+                if my_ch341.connect_vtx() == 1:
+                    my_ch341.flash_read_file()
+                    self._statusbar_frame.status_label_set_text(*getFirmwareFromCRC(my_ch341.crc_table))
+                else:
+                    self._statusbar_frame.status_label_set_text(
+                        "VTX not found. Check connection", "red")
 
     def on_tab_changed(self, event):
         print("Selected tab:", self.current_selected_tab())
@@ -294,6 +570,7 @@ class MyGUI:
             # self._programmer_frame.local_fw_button_disable()
             self._programmer_frame.update_button_set_text_update("VTX")
             self._programmer_frame.update_button_disable()
+            self._programmer_frame.detect_button_enable()
             self._programmer_frame.online_fw_button_show()
 
             self.on_select_vtx_target()
@@ -310,6 +587,7 @@ class MyGUI:
             self._programmer_frame.update_button_set_text_update(
                 "Monitor")
             self._programmer_frame.update_button_disable()
+            self._programmer_frame.detect_button_disable()
             self._programmer_frame.online_fw_button_show()
             self.monitor_is_alive = 0
             my_ch341.monitor_connected = 0
@@ -324,6 +602,7 @@ class MyGUI:
             self._programmer_frame.local_fw_button_enable()
             self._programmer_frame.update_button_set_text_update("Event VRX")
             self._programmer_frame.update_button_disable()
+            self._programmer_frame.detect_button_disable()
             self._programmer_frame.online_fw_button_show()
 
             my_ch341.status = ch341_status.IDLE.value
@@ -418,6 +697,7 @@ class MyGUI:
                 self._statusbar_frame.label_hidden()
                 self._programmer_frame.update_button_set_text_update("VTX")
                 self._programmer_frame.update_button_disable()
+                self._programmer_frame.detect_button_disable()
             elif my_download.status == download_status.DOWNLOAD_VTX_FW_FAILED.value:
                 my_download.status = download_status.IDLE.value
                 my_ch341.status = ch341_status.IDLE.value
@@ -456,6 +736,7 @@ class MyGUI:
                     self._statusbar_frame.label_hidden()
                     self._programmer_frame.update_button_set_text_update("VTX")
                     self._programmer_frame.update_button_disable()
+                    self._programmer_frame.detect_button_disable()
 
             elif my_ch341.status == ch341_status.VTX_UPDATE.value:  # refresh progress bar
                 value = (my_ch341.written_len /
@@ -464,10 +745,11 @@ class MyGUI:
             elif my_ch341.status == ch341_status.VTX_UPDATEDONE.value:  # vtx update done
                 self._statusbar_frame.progress_bar_set_value(100)
                 self._statusbar_frame.status_label_set_text(
-                    "Firmware updated. Connect another VTX(the same type) to update, or click cancel to finish.", "#06b025")
+                    "Firmware updated. Connect another VTX (the same type) to update, or click cancel to finish.", "#06b025")
                 my_ch341.status = ch341_status.VTX_RECONNECT.value
                 self._programmer_frame.update_button_set_text_cancel()
                 self._programmer_frame.update_button_enable()
+                self._programmer_frame.detect_button_enable()
 
                 """
                 my_ch341.status = ch341_status.IDLE.value
@@ -500,11 +782,13 @@ class MyGUI:
                 my_ch341.status = ch341_status.VTX_RECONNECT.value
                 self._programmer_frame.update_button_set_text_cancel()
                 self._programmer_frame.update_button_enable()
+                self._programmer_frame.detect_button_enable()
 
             elif my_ch341.status == ch341_status.VTX_RECONNECTDONE.value:
                 my_ch341.status = ch341_status.VTX_UPDATE.value
                 self._programmer_frame.update_button_set_text_update("VTX")
                 self._programmer_frame.update_button_disable()
+                self._programmer_frame.detect_button_disable()
                 self._statusbar_frame.label_hidden()
 
             elif my_ch341.status == ch341_status.VTX_FW_ERROR.value:  # vtx fw error
@@ -541,6 +825,7 @@ class MyGUI:
                 self._programmer_frame.update_button_set_text_update(
                     "Monitor")
                 self._programmer_frame.update_button_disable()
+                self._programmer_frame.detect_button_disable()
                 my_ch341.status = ch341_status.MONITOR_UPDATE.value
             elif my_download.status == download_status.DOWNLOAD_MONITOR_FW_FAILED.value:
                 my_download.status = download_status.IDLE.value
@@ -585,6 +870,7 @@ class MyGUI:
                         self._programmer_frame.update_button_set_text_update(
                             "Monitor")
                         self._programmer_frame.update_button_disable()
+                        self._programmer_frame.detect_button_disable()
                         my_ch341.status = ch341_status.MONITOR_UPDATE.value
 
                 elif my_ch341.status == ch341_status.MONITOR_UPDATE.value:  # refresh progress bar
@@ -602,6 +888,7 @@ class MyGUI:
                     self._programmer_frame.update_button_set_text_update(
                         "Monitor")
                     self._programmer_frame.update_button_enable()
+                    self._programmer_frame.detect_button_disable()
                     self._programmer_frame.version_combobox_enable()
                     self._programmer_frame.local_fw_button_enable()
                     self._programmer_frame.online_fw_button_enable(
@@ -621,6 +908,7 @@ class MyGUI:
                     self._programmer_frame.update_button_set_text_update(
                         "Monitor")
                     self._programmer_frame.update_button_enable()
+                    self._programmer_frame.detect_button_disable()
                     self._programmer_frame.version_combobox_enable()
                     self._programmer_frame.local_fw_button_enable()
                     self._programmer_frame.online_fw_button_enable(
@@ -674,6 +962,7 @@ class MyGUI:
                 self._programmer_frame.update_button_set_text_update(
                     "Event VRX")
                 self._programmer_frame.update_button_disable()
+                self._programmer_frame.detect_button_disable()
                 my_ch341.status = ch341_status.EVENT_VRX_UPDATE.value
             elif my_download.status == download_status.DOWNLOAD_EVENT_VRX_FW_FAILED.value:
                 my_download.status = download_status.IDLE.value
@@ -711,6 +1000,7 @@ class MyGUI:
                     self._programmer_frame.update_button_set_text_update(
                         "Event VRX")
                     self._programmer_frame.update_button_disable()
+                    self._programmer_frame.detect_button_disable()
                     self._statusbar_frame.label_hidden()
                     my_ch341.status = ch341_status.EVENT_VRX_UPDATE.value
 
@@ -727,6 +1017,7 @@ class MyGUI:
                 self._programmer_frame.update_button_set_text_update(
                     "Event VRX")
                 self._programmer_frame.update_button_enable()
+                self._programmer_frame.detect_button_disable()
                 self._programmer_frame.version_combobox_enable()
                 self._programmer_frame.local_fw_button_enable()
                 self._programmer_frame.online_fw_button_enable(
@@ -744,6 +1035,7 @@ class MyGUI:
                 self._programmer_frame.update_button_set_text_update(
                     "Event VRX")
                 self._programmer_frame.update_button_enable()
+                self._programmer_frame.detect_button_disable()
                 self._programmer_frame.version_combobox_enable()
                 self._programmer_frame.local_fw_button_enable()
                 self._programmer_frame.online_fw_button_enable(
@@ -751,7 +1043,7 @@ class MyGUI:
 
                 self._statusbar_frame.progress_bar_set_value(0)
                 self._statusbar_frame.status_label_set_text(
-                    "Fiwamre update failed. Firmware error", "red")
+                    "Firmware update failed. Firmware error", "red")
 
         self._main_window.after(100, self.refresh)
 
