@@ -10,11 +10,13 @@ class parse:
         self.event_vrx_releases_path = "resource/event_vrx_releases"
         self.monitor_releases_path = "resource/monitor_releases"
         self.vtx_tragets_image_path = "resource/vtx_targets.png"
+        self.crc_path = "resource/crc.json"
 
         self.vtx_info = {}
         self.event_vrx_info = {}
         self.monitor_info = {}
         self.vtx_target_image = []
+        self.crc_database = {}
 
     def parse_vtx_common(self):
         try:
@@ -139,5 +141,13 @@ class parse:
 
         return 1
 
+    def parse_crc_database(self):
+        try:
+            with open(self.crc_path, 'r') as f:
+                data = f.read()
+            self.crc_database = json.loads(data)
+            return 1
+        except:
+            return 0
 
 my_parse = parse()

@@ -57,6 +57,8 @@ def download_thread_proc():
         "https://api.github.com/repos/ligenxxxx/event-vrx/releases", "resource/event_vrx_releases", 1)
     my_download.download_file(
         "https://api.github.com/repos/ligenxxxx/hv/releases", "resource/monitor_releases", 1)
+    my_download.download_file(
+        "https://raw.githubusercontent.com/FiorixF1/hdzero-programmer/main/crc.json", "resource/crc.json", 1)
 
     time.sleep(1)
     my_download.status = download_status.FILE_PARSE.value

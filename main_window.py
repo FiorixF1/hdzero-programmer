@@ -21,262 +21,12 @@ import io
 
 
 
-def getFirmwareFromCRC(crc_table):
-    firmware_list = {
-        "hdzero_freestyle_v1 @ 1.0.0": {
-            "pageNum": 187,
-            "read_crc": "0x2c7871ad",
-        },
-        "hdzero_race_v1 @ 1.0.0": {
-            "pageNum": 183,
-            "read_crc": "0xed18964a",
-        },
-        "hdzero_race_v2 @ 1.0.0": {
-            "pageNum": 183,
-            "read_crc": "0xf88dc480",
-        },
-        "hdzero_whoop @ 1.0.0": {
-            "pageNum": 172,
-            "read_crc": "0xa9649ace",
-        },
-        "hdzero_whoop_lite @ 1.0.0": {
-            "pageNum": 182,
-            "read_crc": "0xaeed4934",
-        },
-        "hdzero_freestyle_v1 @ 1.1.0": {
-            "pageNum": 188,
-            "read_crc": "0xa36937e4",
-        },
-        "hdzero_race_v1 @ 1.1.0": {
-            "pageNum": 184,
-            "read_crc": "0xb3c0e07a",
-        },
-        "hdzero_race_v2 @ 1.1.0": {
-            "pageNum": 184,
-            "read_crc": "0x153f831e",
-        },
-        "hdzero_whoop @ 1.1.0": {
-            "pageNum": 172,
-            "read_crc": "0x98ba4b29",
-        },
-        "hdzero_whoop_lite @ 1.1.0": {
-            "pageNum": 183,
-            "read_crc": "0x30758bc7",
-        },
-        "hdzero_freestyle_v1 @ 1.2.0": {
-            "pageNum": 195,
-            "read_crc": "0xc31a3596",
-        },
-        "hdzero_race_v1 @ 1.2.0": {
-            "pageNum": 191,
-            "read_crc": "0x4b4d7aeb",
-        },
-        "hdzero_race_v2 @ 1.2.0": {
-            "pageNum": 191,
-            "read_crc": "0x5d6d7f88",
-        },
-        "hdzero_whoop @ 1.2.0": {
-            "pageNum": 180,
-            "read_crc": "0xa97b865d",
-        },
-        "hdzero_whoop_lite @ 1.2.0": {
-            "pageNum": 190,
-            "read_crc": "0x90957a34",
-        },
-        "foxeer_vtx @ 1.3.0": {
-            "pageNum": 195,
-            "read_crc": "0x47be5d3a",
-        },
-        "hdzero_freestyle_v1 @ 1.3.0": {
-            "pageNum": 200,
-            "read_crc": "0xdc45f45f",
-        },
-        "hdzero_race_v1 @ 1.3.0": {
-            "pageNum": 195,
-            "read_crc": "0x1c4220a0",
-        },
-        "hdzero_race_v2 @ 1.3.0": {
-            "pageNum": 195,
-            "read_crc": "0x1207d32d",
-        },
-        "hdzero_race_v3 @ 1.3.0": {
-            "pageNum": 190,
-            "read_crc": "0x0894030d",
-        },
-        "hdzero_whoop @ 1.3.0": {
-            "pageNum": 184,
-            "read_crc": "0xf2297c3f",
-        },
-        "hdzero_whoop_lite @ 1.3.0": {
-            "pageNum": 195,
-            "read_crc": "0x4a873a8b",
-        },
-        "foxeer_vtx @ 1.4.0": {
-            "pageNum": 200,
-            "read_crc": "0x2b758ebd",
-        },
-        "hdzero_freestyle_v1 @ 1.4.0": {
-            "pageNum": 205,
-            "read_crc": "0xdbb9c87f",
-        },
-        "hdzero_race_v1 @ 1.4.0": {
-            "pageNum": 200,
-            "read_crc": "0xa3ca64bd",
-        },
-        "hdzero_race_v2 @ 1.4.0": {
-            "pageNum": 199,
-            "read_crc": "0x40a5716b",
-        },
-        "hdzero_race_v3 @ 1.4.0": {
-            "pageNum": 195,
-            "read_crc": "0xa9925181",
-        },
-        "hdzero_whoop @ 1.4.0": {
-            "pageNum": 189,
-            "read_crc": "0x69bdd828",
-        },
-        "hdzero_whoop_lite @ 1.4.0": {
-            "pageNum": 200,
-            "read_crc": "0x785b02f5",
-        },
-        "foxeer_vtx @ 1.5.0": {
-            "pageNum": 207,
-            "read_crc": "0xed2133b3",
-        },
-        "hdzero_freestyle_v1 @ 1.5.0": {
-            "pageNum": 212,
-            "read_crc": "0xfad37aba",
-        },
-        "hdzero_freestyle_v2 @ 1.5.0": {
-            "pageNum": 213,
-            "read_crc": "0xfe479852",
-        },
-        "hdzero_race_v1 @ 1.5.0": {
-            "pageNum": 207,
-            "read_crc": "0xdfe1f8d4",
-        },
-        "hdzero_race_v2 @ 1.5.0": {
-            "pageNum": 207,
-            "read_crc": "0x602030a7",
-        },
-        "hdzero_race_v3 @ 1.5.0": {
-            "pageNum": 201,
-            "read_crc": "0xc31605fd",
-        },
-        "hdzero_whoop @ 1.5.0": {
-            "pageNum": 197,
-            "read_crc": "0x855da136",
-        },
-        "hdzero_whoop_lite @ 1.5.0": {
-            "pageNum": 207,
-            "read_crc": "0x7f1a74be",
-        },
-        "foxeer_vtx @ 1.5.0-CITA": {
-            "pageNum": 195,
-            "read_crc": "0x1b06017f",
-        },
-        "hdzero_race_v1 @ 1.5.0-CITA": {
-            "pageNum": 195,
-            "read_crc": "0x815fb9a6",
-        },
-        "hdzero_race_v2 @ 1.5.0-CITA": {
-            "pageNum": 194,
-            "read_crc": "0x9c95b6c1",
-        },
-        "hdzero_race_v3 @ 1.5.0-CITA": {
-            "pageNum": 195,
-            "read_crc": "0xe966412a",
-        },
-        "hdzero_whoop @ 1.5.0-CITA": {
-            "pageNum": 195,
-            "read_crc": "0x193c4a95",
-        },
-        "hdzero_whoop_lite @ 1.5.0-CITA": {
-            "pageNum": 195,
-            "read_crc": "0xc6162081",
-        },
-        "foxeer_vtx @ 1.6.0": {
-            "pageNum": 211,
-            "read_crc": "0x423442ff",
-        },
-        "hdzero_freestyle_v1 @ 1.6.0": {
-            "pageNum": 217,
-            "read_crc": "0x77b98790",
-        },
-        "hdzero_freestyle_v2 @ 1.6.0": {
-            "pageNum": 217,
-            "read_crc": "0xfb169c46",
-        },
-        "hdzero_race_v1 @ 1.6.0": {
-            "pageNum": 211,
-            "read_crc": "0xfed5cc24",
-        },
-        "hdzero_race_v2 @ 1.6.0": {
-            "pageNum": 211,
-            "read_crc": "0x5dba46c8",
-        },
-        "hdzero_race_v3 @ 1.6.0": {
-            "pageNum": 205,
-            "read_crc": "0xf84d23ee",
-        },
-        "hdzero_whoop @ 1.6.0": {
-            "pageNum": 201,
-            "read_crc": "0x36f37629",
-        },
-        "hdzero_whoop_lite @ 1.6.0": {
-            "pageNum": 212,
-            "read_crc": "0x33d2a0cf",
-        },
-        "hdzero_eco @ 1.6.0": {
-            "pageNum": 203,
-            "read_crc": "0x7bac96fa",
-        },
-        "foxeer_vtx @ 1.6.0-CITA": {
-            "pageNum": 199,
-            "read_crc": "0x259c506a",
-        },
-        "hdzero_race_v1 @ 1.6.0-CITA": {
-            "pageNum": 199,
-            "read_crc": "0xd26986b6",
-        },
-        "hdzero_race_v2 @ 1.6.0-CITA": {
-            "pageNum": 199,
-            "read_crc": "0xc987e009",
-        },
-        "hdzero_race_v3 @ 1.6.0-CITA": {
-            "pageNum": 200,
-            "read_crc": "0xdf1f7aa6",
-        },
-        "hdzero_whoop @ 1.6.0-CITA": {
-            "pageNum": 199,
-            "read_crc": "0x950cd2c5",
-        },
-        "hdzero_whoop_lite @ 1.6.0-CITA": {
-            "pageNum": 200,
-            "read_crc": "0xea7b2fb2",
-        },
-        "hdzero_eco @ 1.6.0-CITA": {
-            "pageNum": 201,
-            "read_crc": "0x6fe85d4f",
-        },
-    }
-    for firmware, metadata in firmware_list.items():
-        if crc_table[metadata["pageNum"]] == metadata["read_crc"]:
-            if firmware.endswith("CITA"):
-                return (firmware + " - Firmware is valid", "green")
-            else:
-                return (firmware + " - Firmware is NOT valid", "red")
-    else:
-        return ("Unknown firmware" + " - Firmware is NOT valid", "red")
- 
- 
- 
 class MyGUI:
 
     def __init__(self, init_window_name):
         self.winWidth = 800
         self.winHeight = 600
-        self.title = "HDZero Programmer " + "V2.0.0"
+        self.title = "HDZero Programmer " + "V2.0.0 CITA"
 
         self._programmer_frame = None
         self._main_window = init_window_name
@@ -546,6 +296,16 @@ class MyGUI:
                 self._statusbar_frame.label_hidden()
                 self._statusbar_frame.progress_bar_set_value(0)
 
+    def getFirmwareFromCRC(crc_table):
+        for firmware, metadata in my_parse.crc_database.items():
+            if crc_table[metadata["pageNum"]] in metadata["read_crc"]:
+                if firmware.endswith("CITA"):
+                    return (firmware + " - Firmware is valid", "green")
+                else:
+                    return (firmware + " - Firmware is NOT valid", "red")
+        else:
+            return ("Unknown firmware" + " - Firmware is NOT valid", "red")
+
     def on_detect(self):
         if self.current_selected_tab() == 0:
 
@@ -672,8 +432,9 @@ class MyGUI:
             ret2 = my_parse.parse_monitor_releases()
             ret3 = my_parse.parse_vtx_tragets_image(
                 len(list(my_parse.vtx_info.keys())))
+            ret4 = my_parse.parse_crc_database()
 
-            if ret0 == 0 or ret1 == 0 or ret2 == 0 or ret3 == 0:
+            if ret0 == 0 or ret1 == 0 or ret2 == 0 or ret3 == 0 or ret4 == 0:
                 self.network_error = 1
                 self.set_downloading_label("Download firmware list failed")
                 self._main_window.update()
