@@ -1,27 +1,9 @@
-# hdzero-programmer
+## python version
 
-## Linux
+windows 3.10.5 32-bit
 
-### install library
+## generate exe
 
 ```
-sudo apt-get install python3-tk python3-pil.imagetk python3-wget
+pyinstaller ./hdzero_programmer.py --onefile
 ```
-
-### Install driver
-
- execute only once
-
- `cd ./ch341par_linux/driver`
-
- `make`
-
- `sudo make install`
-
-### connect your programmer tool to pc
-
-### Modify device permission
-
-`sudo chmod 777 /dev/ch341_pis0`
-
-### Run HDZeroProgrammer.py
