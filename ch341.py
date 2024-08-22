@@ -122,7 +122,7 @@ class linux_driver(object):
 
     def write_I2C(self, addr_usb_write_fpga_device, addr, byte):
         # this function does not exist?
-        self.dll.CH341WriteI2C(0, addr_usb_write_fpga_device, addr, byte)
+        self.dll.CH34xWriteI2C(0, addr_usb_write_fpga_device, addr, byte)
 
     def set_delay_ms(self, ms):
         self.dll.CH34xSetDelaymS(self.iIndex, ms)
@@ -439,6 +439,10 @@ class ch341_class(object):
         if self.dll_object.open_device() < 0:
             return 0
         else:
+            # needed on Linux
+            if self.dll_object.get_chip_version() == 0:
+                return 0
+
             self.flash_switch0()
             flash_id_0 = self.flash_read_id()
             self.flash_switch1()
@@ -537,11 +541,11 @@ class ch341_class(object):
         if self.dll_object.open_device() < 0:
             return 0
         else:
-            self.dll_object.set_stream(False)
+            self.dll_object.set_stream(0)
             return 1
 
     def FlashChipErase(self):
-        self.dll_object.set_stream(True)
+        self.dll_object.set_stream(1)
 
         self.iobuffer[0] = self.WRITE_ENABLE
         self.dll_object.stream_spi4(
@@ -561,7 +565,7 @@ class ch341_class(object):
 
     def write_SPI(self, addr, data_buf, size):
         temp_write_buffer = create_string_buffer(int(PAGE_SIZE+HEAD_SIZE))
-        self.dll_object.set_stream(True)
+        self.dll_object.set_stream(1)
 
         page = 0
         while size > PAGE_SIZE:
@@ -705,9 +709,11 @@ def ch341_thread_proc():
                 my_ch341.reconnect_vtx = 0
         elif my_ch341.status == ch341_status.VTX_RECONNECT.value:  # reconnect vtx
             if my_ch341.reconnect_vtx == 0:
+                my_ch341.dll_object.close_device()
                 if my_ch341.connect_vtx() == 0:
                     my_ch341.reconnect_vtx = 1
             elif my_ch341.reconnect_vtx == 1:
+                my_ch341.dll_object.close_device()
                 if my_ch341.connect_vtx() == 1:
                     my_ch341.reconnect_vtx = 0
                     my_ch341.status = ch341_status.VTX_RECONNECTDONE.value

@@ -30,6 +30,6 @@ sudo apt-get install python3-tk python3-pil.imagetk python3-wget
 
 ### Modify device permission
 
-`sudo chmod 777 /dev/ch341_pis0`
+`sudo chmod 777 /dev/ch34x_pis0`
 
 ### Run hdzero_programmer.py

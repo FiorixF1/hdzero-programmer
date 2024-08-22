@@ -297,6 +297,8 @@ class MyGUI:
                 self._statusbar_frame.progress_bar_set_value(0)
 
     def get_firmware_from_CRC(self, crc_table):
+        if len(my_parse.crc_database) == 0:
+            return ("Could not verify firmware because the database has not been loaded", "yellow")
         for firmware, metadata in my_parse.crc_database.items():
             if crc_table[metadata["pageNum"]] in metadata["read_crc"]:
                 if firmware.endswith("CITA"):
