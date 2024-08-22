@@ -23,7 +23,7 @@ class frame_statusbar:
 
     def init_label(self):
         self.label = tk.Label(self._frame, text="")
-        self.status_label_set_bg("SystemButtonFace")
+        self.status_label_set_bg("grey85")
 
     def status_label_set_text(self, text, color):
         self.label["text"] = text
@@ -34,7 +34,7 @@ class frame_statusbar:
         self.label["bg"] = color
         '''
         if color == 1: # system
-            self.label["bg"] = "SystemButtonFace"
+            self.label["bg"] = "grey85"
         elif color == 2: # red
             self.label["bg"] = "red"
         else: # green

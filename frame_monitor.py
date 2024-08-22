@@ -3,6 +3,8 @@ from tkinter import ttk
 import ctypes
 import global_var
 import time
+import sys
+from ch341 import windows_driver, linux_driver
 
 
 class frame_monitor:
@@ -11,7 +13,6 @@ class frame_monitor:
         self._frame = tk.Frame(parent)
         parent.add(self._frame, text="Monitor")
 
-        self.dll_name = "CH341DLL.DLL"
         self.color_background = "#303030"
         self.color_label = "white"
 
@@ -76,10 +77,12 @@ class frame_monitor:
         self.init_osd_setting()
         self.init_reset_button()
 
-        try:
-            self.dll = ctypes.WinDLL(self.dll_name)
-        except:
-            print("Please check ch341 driver")
+        if sys.platform.startswith('linux'):
+            self.dll_object = linux_driver()
+        else:
+            self.dll_object = windows_driver()
+
+        self.dll_object.load()
 
     def usb_heart(self):
         self.heart_cnt += 1
@@ -88,7 +91,7 @@ class frame_monitor:
         self.write_i2c(self.addr_usb_heart, self.heart_cnt)
 
     def write_i2c(self, addr, byte):
-        self.dll.CH341WriteI2C(0, self.addr_usb_write_fpga_device, addr, byte)
+        self.dll_object.write_I2C(self.addr_usb_write_fpga_device, addr, byte)
         time.sleep(0.001)
 
     def write_brightness(self, b):

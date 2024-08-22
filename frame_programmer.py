@@ -138,15 +138,15 @@ class frame_programmer:
 
     def detect_button_disable(self):
         self.detect_button["state"] = "disabled"
-        self.detect_button["bg"] = "SystemButtonFace"
+        self.detect_button["bg"] = "grey85"
 
     def detect_button_enable(self):
         self.detect_button["state"] = "normal"
-        self.detect_button["bg"] = "SystemButtonFace"
+        self.detect_button["bg"] = "grey85"
 
     def update_button_disable(self):
         self.update_button["state"] = "disabled"
-        self.update_button["bg"] = "SystemButtonFace"
+        self.update_button["bg"] = "grey85"
 
     def update_button_enable(self):
         self.update_button["state"] = "normal"

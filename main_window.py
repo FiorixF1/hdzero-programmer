@@ -196,7 +196,7 @@ class MyGUI:
                 self._programmer_frame.online_fw_button_disable()
 
                 self._statusbar_frame.status_label_set_text(
-                    "Connecting VTX ...", "SystemButtonFace")
+                    "Connecting VTX ...", "grey85")
                 self._statusbar_frame.progress_bar_set_value(0)
             else:
                 my_ch341.status = ch341_status.IDLE.value
@@ -236,7 +236,7 @@ class MyGUI:
                 self._programmer_frame.online_fw_button_disable()
 
                 self._statusbar_frame.status_label_set_text(
-                    "Connecting Monitor ...", "SystemButtonFace")
+                    "Connecting Monitor ...", "grey85")
                 self._statusbar_frame.progress_bar_set_value(0)
             else:
                 print("cancel Monitor programmer")
@@ -276,7 +276,7 @@ class MyGUI:
                 self._programmer_frame.local_fw_button_disable()
                 self._programmer_frame.online_fw_button_disable()
                 self._statusbar_frame.status_label_set_text(
-                    "Connecting Event VRX ...", "SystemButtonFace")
+                    "Connecting Event VRX ...", "grey85")
                 self._statusbar_frame.progress_bar_set_value(0)
             else:
                 my_download.to_stop = 1
@@ -396,7 +396,8 @@ class MyGUI:
         self.downloading_window_status = 1
         self.downloading_window.overrideredirect(True)
 
-        self._main_window.attributes('-disable', True)
+        if '-disable' in self._main_window.attributes():
+            self._main_window.attributes('-disable', True)
 
     def set_downloading_label(self, str):
         self.downloading_label.config(text=str)
@@ -443,7 +444,8 @@ class MyGUI:
 
             self._vtx_frame.create_radio_button_list(
                 list(my_parse.vtx_info.keys()), self.on_select_vtx_target, my_parse.vtx_target_image)
-            self._main_window.attributes('-disable', False)
+            if '-disable' in self._main_window.attributes():
+               self._main_window.attributes('-disable', False)
 
         # vtx
         if self.current_selected_tab() == 0:
@@ -488,7 +490,7 @@ class MyGUI:
                     my_download.save_path = "resource/FW"
                     my_download.status = download_status.DOWNLOAD_VTX_FW.value  # download url
                     self._statusbar_frame.status_label_set_text(
-                        "Downloading Firmware ...", "SystemButtonFace")
+                        "Downloading Firmware ...", "grey85")
                 else:
                     selected_target = self._vtx_frame.vtx_target.get()
                     my_ch341.target_id = my_parse.vtx_info[selected_target]["id"]
@@ -622,7 +624,7 @@ class MyGUI:
                         my_download.save_path = "resource/FW"
                         my_download.status = download_status.DOWNLOAD_MONITOR_FW.value  # download url
                         self._statusbar_frame.status_label_set_text(
-                            "Downloading Firmware ...", "SystemButtonFace")
+                            "Downloading Firmware ...", "grey85")
                     else:
                         my_ch341.written_len = 0
                         my_ch341.to_write_len = os.path.getsize(
@@ -754,7 +756,7 @@ class MyGUI:
                     my_download.save_path = "resource/FW"
                     my_download.status = download_status.DOWNLOAD_EVENT_VRX_FW.value  # download url
                     self._statusbar_frame.status_label_set_text(
-                        "Downloading Firmware ...", "SystemButtonFace")
+                        "Downloading Firmware ...", "grey85")
                 else:
                     my_ch341.written_len = 0
                     my_ch341.to_write_len = os.path.getsize(my_ch341.fw_path)

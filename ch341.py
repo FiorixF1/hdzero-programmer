@@ -4,13 +4,129 @@ import time
 import sys
 import os
 from ctypes import create_string_buffer
-from frame_monitor import frame_monitor
 import tkinter as tk
 from tkinter import ttk
 from global_var import *
 from ctypes import *
 import global_var
 import subprocess
+
+
+
+class windows_driver(object):
+    def __init__(self):
+        self.dll = None
+        self.dll_name = "resource\\driver\\CH341DLL.DLL"
+        self.iIndex = 0
+
+    def load(self):
+        try:
+            self.dll = ctypes.WinDLL(self.dll_name)
+        except:
+            command = "resource\\driver\\SETUP.EXE \\S"
+            print("Need to install ch341 driver")
+            print("Installing ...")
+            subprocess.run(command, shell=True, capture_output=True, text=True)
+            print("done")
+            time.sleep(1)
+            try:
+                self.dll = ctypes.WinDLL(self.dll_name)
+            except:
+                a = 1
+
+    def open_device(self):
+        return self.dll.CH341OpenDevice(self.iIndex)
+
+    def close_device(self):
+        self.dll.CH341CloseDevice(self.iIndex)
+
+    def get_version(self):
+        return self.dll.CH341GetVersion()
+
+    def get_driver_version(self):
+        return self.dll.CH341GetDrvVersion()
+
+    def get_chip_version(self):
+        return self.dll.CH341GetVerIC(self.iIndex)
+
+    def set_stream(self, cs):
+        if cs == True:
+            self.dll.CH341SetStream(self.iIndex, 0x80)
+        else:
+            self.dll.CH341SetStream(self.iIndex, 0x81)
+
+    def stream_spi4(self, command, ilength, iobuffer):
+        self.dll.CH341StreamSPI4(
+            self.iIndex, command, ilength, iobuffer)
+
+    def set_output(self, a, b, c):
+        self.dll.CH341SetOutput(self.iIndex, a, b, c)
+
+    def read_I2C(self, addr_fpga_device, addr, iobuffer):
+        self.dll.CH341ReadI2C(0, addr_fpga_device, addr, iobuffer)
+
+    def write_I2C(self, addr_usb_write_fpga_device, addr, byte):
+        self.dll.CH341WriteI2C(0, addr_usb_write_fpga_device, addr, byte)
+
+    def set_delay_ms(self, ms):
+        self.dll.CH341SetDelaymS(self.iIndex, ms)
+
+
+
+class linux_driver(object):
+    def __init__(self):
+        self.dll = None
+        self.dll_name = "./resource/driver/libch347.so"
+        self.iIndex = 0
+
+    def load(self):
+        try:
+            self.dll = cdll.LoadLibrary(self.dll_name)
+        except:
+            print("Please check ch341 driver")
+
+    def open_device(self):
+        self.iIndex = self.dll.CH34xOpenDevice("/dev/ch34x_pis0".encode())
+        return self.iIndex
+
+    def close_device(self):
+        self.dll.CH34xCloseDevice(self.iIndex)
+
+    def get_version(self):
+        return self.dll.CH34xGetVersion()
+
+    def get_driver_version(self):
+        return self.dll.CH34xGetDrvVersion() 
+
+    def get_chip_version(self):
+        ver_str = create_string_buffer(1)
+        self.dll.CH34x_GetChipVersion(self.iIndex, ver_str)
+        return int.from_bytes(ver_str[0], byteorder='big')
+
+    def set_stream(self, cs):
+        if cs == True:
+            self.dll.CH34xSetStream(self.iIndex, 0x80)
+        else:
+            self.dll.CH34xSetStream(self.iIndex, 0x81)
+
+    def stream_spi4(self, command, ilength, iobuffer):
+        self.dll.CH34xStreamSPI4(
+            self.iIndex, command, ilength, iobuffer)
+
+    def set_output(self, a, b, c):
+        self.dll.CH34xSetOutput(self.iIndex, a, b, c)
+
+    def read_I2C(self, addr_fpga_device, addr, iobuffer):
+        # this function does not exist?
+        self.dll.CH34xReadI2C(0, addr_fpga_device, addr, iobuffer)
+
+    def write_I2C(self, addr_usb_write_fpga_device, addr, byte):
+        # this function does not exist?
+        self.dll.CH341WriteI2C(0, addr_usb_write_fpga_device, addr, byte)
+
+    def set_delay_ms(self, ms):
+        self.dll.CH34xSetDelaymS(self.iIndex, ms)
+
 
 
 class ch341_class(object):
@@ -26,11 +142,10 @@ class ch341_class(object):
         self.fw_8339_size = 0
         self.fw_8339_buf = create_string_buffer(FW_8339SIZE)
 
-        self.dll = None
+        self.dll_object = None
         self.target = -1
         self.status = ch341_status.IDLE.value        # idle
         self.read_setting_flag = 1
-        self.dll_name = "CH341DLL.DLL"
 
         self.reconnect_vtx = 0
 
@@ -79,19 +194,12 @@ class ch341_class(object):
         self.buffer_size = 2560
         self.write_buffer = create_string_buffer(self.buffer_size)
 
-        try:
-            self.dll = ctypes.WinDLL(self.dll_name)
-        except:
-            command = "resource\driver\SETUP.EXE \S"
-            print("Need to install ch341 driver")
-            print("Installing ...")
-            subprocess.run(command, shell=True, capture_output=True, text=True)
-            print("done")
-            time.sleep(1)
-            try:
-                self.dll = ctypes.WinDLL(self.dll_name)
-            except:
-                a = 1
+        if sys.platform.startswith('linux'):
+            self.dll_object = linux_driver()
+        else:
+            self.dll_object = windows_driver()
+
+        self.dll_object.load()
 
     def parse_monitor_fw(self, fw_path):
         try:
@@ -128,7 +236,7 @@ class ch341_class(object):
             return 0
 
     def ch341read_i2c(self, addr):
-        self.dll.CH341ReadI2C(0, self.addr_fpga_device, addr, self.iobuffer)
+        self.dll_object.read_I2C(self.addr_fpga_device, addr, self.iobuffer)
         return int.from_bytes(self.iobuffer[0], byteorder='big')
 
     def read_setting(self):
@@ -145,25 +253,22 @@ class ch341_class(object):
         print(f"cell:{global_var.cell_count:d} warning_cell:{global_var.warning_cell_voltage:d} fpga_version:0x{fpga_version:2x}")
 
     def set_stream(self, cs):
-        if cs == True:
-            self.dll.CH341SetStream(0, 0x80)
-        else:
-            self.dll.CH341SetStream(0, 0x81)
+        self.dll_object.set_stream(cs)
 
     def stream_spi4(self):
-        self.dll.CH341StreamSPI4(0, 0x80, self.ilength, self.iobuffer)
+        self.dll_object.stream_spi4(0x80, self.ilength, self.iobuffer)
 
     def flash_switch0(self):
-        self.dll.CH341SetOutput(0, 0x03, 0x0000FF00, 0x4300)
+        self.dll_object.set_output(0x03, 0x0000FF00, 0x4300)
 
     def flash_switch1(self):
-        self.dll.CH341SetOutput(0, 0x03, 0x0000FF00, 0x8300)
+        self.dll_object.set_output(0x03, 0x0000FF00, 0x8300)
 
     def flash_switch2(self):
-        self.dll.CH341SetOutput(0, 0x03, 0x0000FF00, 0xc800)
+        self.dll_object.set_output(0x03, 0x0000FF00, 0xc800)
 
     def flash_release(self):
-        self.dll.CH341SetOutput(0, 0x03, 0x0000FF00, 0xc200)
+        self.dll_object.set_output(0x03, 0x0000FF00, 0xc200)
 
     def flash_read_id(self):
         self.iobuffer[0] = 0x9f
@@ -331,7 +436,7 @@ class ch341_class(object):
         dump.close()
 
     def connect_vtx(self):
-        if self.dll.CH341OpenDevice(0) < 0:
+        if self.dll_object.open_device() < 0:
             return 0
         else:
             self.flash_switch0()
@@ -393,7 +498,7 @@ class ch341_class(object):
             return 0
 
     def connect_monitor(self, sleep_sec):
-        if self.dll.CH341OpenDevice(0) < 0:
+        if self.dll_object.open_device() < 0:
             return 0
         else:
             # self.dll.CH341SetStream(0, 0x82)
@@ -429,26 +534,26 @@ class ch341_class(object):
 
     # ---------------- event_vrx --------------------------------
     def connect_event_vrx(self):
-        if self.dll.CH341OpenDevice(nIndex) < 0:
+        if self.dll_object.open_device() < 0:
             return 0
         else:
-            self.dll.CH341SetStream(nIndex, 0x81)
+            self.dll_object.set_stream(False)
             return 1
 
     def FlashChipErase(self):
-        self.dll.CH341SetStream(nIndex, 0x80)
+        self.dll_object.set_stream(True)
 
         self.iobuffer[0] = self.WRITE_ENABLE
-        self.dll.CH341StreamSPI4(
-            nIndex, self.SELECT_FPGA_5680, 1, self.iobuffer)
+        self.dll_object.stream_spi4(
+            self.SELECT_FPGA_5680, 1, self.iobuffer)
 
         self.iobuffer[0] = self.CHIP_ERASE
-        self.dll.CH341StreamSPI4(
-            nIndex, self.SELECT_FPGA_5680, 1, self.iobuffer)
+        self.dll_object.stream_spi4(
+            self.SELECT_FPGA_5680, 1, self.iobuffer)
 
         self.iobuffer[0] = self.WRITE_DISABLE
-        self.dll.CH341StreamSPI4(
-            nIndex, self.SELECT_FPGA_5680, 1, self.iobuffer)
+        self.dll_object.stream_spi4(
+            self.SELECT_FPGA_5680, 1, self.iobuffer)
 
     def data_cpy(self, dest, dst_off, src, src_off, length):
         for i in range(length):
@@ -456,13 +561,13 @@ class ch341_class(object):
 
     def write_SPI(self, addr, data_buf, size):
         temp_write_buffer = create_string_buffer(int(PAGE_SIZE+HEAD_SIZE))
-        self.dll.CH341SetStream(nIndex, 0x80)
+        self.dll_object.set_stream(True)
 
         page = 0
         while size > PAGE_SIZE:
             temp_write_buffer[0] = self.WRITE_ENABLE
-            self.dll.CH341StreamSPI4(
-                nIndex, self.SELECT_FPGA_5680, 1, temp_write_buffer)
+            self.dll_object.stream_spi4(
+                self.SELECT_FPGA_5680, 1, temp_write_buffer)
 
             temp_write_buffer[0] = self.PAGE_PROGRAM
             temp_write_buffer[1] = ((addr & 0xFF0000) >> 16)
@@ -471,21 +576,21 @@ class ch341_class(object):
 
             self.data_cpy(temp_write_buffer, HEAD_SIZE, data_buf,
                           (page * PAGE_SIZE), PAGE_SIZE)
-            self.dll.CH341StreamSPI4(nIndex, self.SELECT_FPGA_5680, int(
+            self.dll_object.stream_spi4(self.SELECT_FPGA_5680, int(
                 PAGE_SIZE+HEAD_SIZE), temp_write_buffer)
 
             temp_write_buffer[0] = self.WRITE_DISABLE
-            self.dll.CH341StreamSPI4(
-                nIndex, self.SELECT_FPGA_5680, 1, temp_write_buffer)
-            self.dll.CH341SetDelaymS(nIndex, 2)
+            self.dll_object.stream_spi4(
+                self.SELECT_FPGA_5680, 1, temp_write_buffer)
+            self.dll_object.set_delay_ms(2)
 
             size -= PAGE_SIZE
             page += 1
             addr += PAGE_SIZE
 
         temp_write_buffer[0] = self.WRITE_ENABLE
-        self.dll.CH341StreamSPI4(
-            nIndex, self.SELECT_FPGA_5680, 1, temp_write_buffer)
+        self.dll_object.stream_spi4(
+            self.SELECT_FPGA_5680, 1, temp_write_buffer)
 
         temp_write_buffer[0] = self.PAGE_PROGRAM
         temp_write_buffer[1] = ((addr & 0xFF0000) >> 16)
@@ -498,12 +603,12 @@ class ch341_class(object):
             self.data_cpy(temp_write_buffer, HEAD_SIZE, data_buf,
                           (page * PAGE_SIZE), PAGE_SIZE)
 
-        self.dll.CH341StreamSPI4(nIndex, self.SELECT_FPGA_5680, int(
+        self.dll_object.stream_spi4(self.SELECT_FPGA_5680, int(
             PAGE_SIZE+HEAD_SIZE), temp_write_buffer)
 
         temp_write_buffer[0] = self.WRITE_DISABLE
-        self.dll.CH341StreamSPI4(
-            nIndex, self.SELECT_FPGA_5680, 1, temp_write_buffer)
+        self.dll_object.stream_spi4(
+            self.SELECT_FPGA_5680, 1, temp_write_buffer)
 
     def write_event_vrx_fw_to_flash(self, path):
         file = open(path, "rb")
@@ -514,14 +619,14 @@ class ch341_class(object):
 
         # erase 5680 flash
         my_ch341.written_len += 15 * PAGE_SIZE
-        self.dll.CH341SetOutput(nIndex, 0x03, 0xffffffff, self.FLASH_SET_5680)
+        self.dll_object.set_output(0x03, 0xffffffff, self.FLASH_SET_5680)
         time.sleep(0.01)
         self.FlashChipErase()
         my_ch341.written_len += 15 * PAGE_SIZE
         time.sleep(1)
 
         # erase fpga flash
-        self.dll.CH341SetOutput(nIndex, 0x03, 0xffffffff, self.FLASH_SET_FPGA)
+        self.dll_object.set_output(0x03, 0xffffffff, self.FLASH_SET_FPGA)
         time.sleep(0.01)
         self.FlashChipErase()
         my_ch341.written_len += 15 * PAGE_SIZE
@@ -531,7 +636,7 @@ class ch341_class(object):
             my_ch341.written_len += 10 * PAGE_SIZE
 
         # write 5680 data to flash
-        self.dll.CH341SetOutput(nIndex, 0x03, 0xffffffff, self.FLASH_SET_5680)
+        self.dll_object.set_output(0x03, 0xffffffff, self.FLASH_SET_5680)
         time.sleep(0.01)
         file.seek(8)
 
@@ -554,7 +659,7 @@ class ch341_class(object):
         my_ch341.written_len += 15 * PAGE_SIZE
 
         # write fpga data to flash
-        self.dll.CH341SetOutput(nIndex, 0x03, 0xffffffff, self.FLASH_SET_FPGA)
+        self.dll_object.set_output(0x03, 0xffffffff, self.FLASH_SET_FPGA)
         page = 0
         while True:
             self.write_buffer = file.read(self.buffer_size)
@@ -569,7 +674,7 @@ class ch341_class(object):
 
         file.flush()
         file.close()
-        self.dll.CH341SetOutput(nIndex, 0x03, 0xffffffff, self.FLASH_SET_FPGA)
+        self.dll_object.set_output(0x03, 0xffffffff, self.FLASH_SET_FPGA)
 
 
 my_ch341 = ch341_class()
@@ -631,7 +736,7 @@ def ch341_thread_proc():
                 my_ch341.flash_switch2()
                 my_ch341.fw_write_to_flash(
                     my_ch341.fw_8339_buf, my_ch341.fw_8339_size)
-                my_ch341.dll.CH341CloseDevice(0)
+                my_ch341.dll_object.close_device()
                 my_ch341.flash_release()
                 my_ch341.status = ch341_status.MONITOR_UPDATEDONE.value
 

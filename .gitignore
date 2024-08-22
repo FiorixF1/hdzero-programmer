@@ -1,10 +1,15 @@
 __pycache__
 build
 dist
+crc.json
 vtx_common
 vtx_releases
+vtx_cita_releases
 event_vrx_releases
 monitor_releases
 FW
+FW.zip
 MONITOR.bin
+dump.bin
 .spec
+ch341par_linux
