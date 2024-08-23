@@ -62,11 +62,11 @@ class windows_driver(object):
     def set_output(self, a, b, c):
         self.dll.CH341SetOutput(self.iIndex, a, b, c)
 
-    def read_I2C(self, addr_fpga_device, addr, iobuffer):
-        self.dll.CH341ReadI2C(0, addr_fpga_device, addr, iobuffer)
+    def read_I2C(self, device, addr, iobuffer):
+        self.dll.CH341ReadI2C(self.iIndex, device, addr, iobuffer)
 
-    def write_I2C(self, addr_usb_write_fpga_device, addr, byte):
-        self.dll.CH341WriteI2C(0, addr_usb_write_fpga_device, addr, byte)
+    def write_I2C(self, device, addr, byte):
+        self.dll.CH341WriteI2C(self.iIndex, device, addr, byte)
 
     def set_delay_ms(self, ms):
         self.dll.CH341SetDelaymS(self.iIndex, ms)
@@ -78,6 +78,7 @@ class linux_driver(object):
         self.dll = None
         self.dll_name = "./resource/driver/libch347.so"
         self.iIndex = 0
+        self.i2c_buf = create_string_buffer(4)
 
     def load(self):
         try:
@@ -86,6 +87,7 @@ class linux_driver(object):
             print("Please check ch341 driver")
 
     def open_device(self):
+        self.dll.CH34xCloseDevice(self.iIndex)
         self.iIndex = self.dll.CH34xOpenDevice("/dev/ch34x_pis0".encode())
         return self.iIndex
 
@@ -116,13 +118,18 @@ class linux_driver(object):
     def set_output(self, a, b, c):
         self.dll.CH34xSetOutput(self.iIndex, a, b, c)
 
-    def read_I2C(self, addr_fpga_device, addr, iobuffer):
-        # this function does not exist?
-        self.dll.CH34xReadI2C(0, addr_fpga_device, addr, iobuffer)
+    # HUGE THANKS TO THIS GUY
+    # https://www.onetransistor.eu/2017/09/ch341a-usb-i2c-programming.html
+    def read_I2C(self, device, addr, iobuffer):
+        self.i2c_buf[0] = device << 1
+        self.i2c_buf[1] = addr
+        self.dll.CH34xStreamI2C(self.iIndex, 2, self.i2c_buf, 1, iobuffer)
 
-    def write_I2C(self, addr_usb_write_fpga_device, addr, byte):
-        # this function does not exist?
-        self.dll.CH34xWriteI2C(0, addr_usb_write_fpga_device, addr, byte)
+    def write_I2C(self, device, addr, byte):
+        self.i2c_buf[0] = device << 1
+        self.i2c_buf[1] = addr
+        self.i2c_buf[2] = byte
+        self.dll.CH34xStreamI2C(self.iIndex, 3, self.i2c_buf, 0, None)
 
     def set_delay_ms(self, ms):
         self.dll.CH34xSetDelaymS(self.iIndex, ms)
@@ -505,6 +512,9 @@ class ch341_class(object):
         if self.dll_object.open_device() < 0:
             return 0
         else:
+            # needed on Linux
+            if self.dll_object.get_chip_version() == 0:
+                return 0
             # self.dll.CH341SetStream(0, 0x82)
             time.sleep(sleep_sec)
             self.flash_switch1()
@@ -541,6 +551,9 @@ class ch341_class(object):
         if self.dll_object.open_device() < 0:
             return 0
         else:
+            # needed on Linux
+            if self.dll_object.get_chip_version() == 0:
+                return 0
             self.dll_object.set_stream(0)
             return 1
 
@@ -709,11 +722,9 @@ def ch341_thread_proc():
                 my_ch341.reconnect_vtx = 0
         elif my_ch341.status == ch341_status.VTX_RECONNECT.value:  # reconnect vtx
             if my_ch341.reconnect_vtx == 0:
-                my_ch341.dll_object.close_device()
                 if my_ch341.connect_vtx() == 0:
                     my_ch341.reconnect_vtx = 1
             elif my_ch341.reconnect_vtx == 1:
-                my_ch341.dll_object.close_device()
                 if my_ch341.connect_vtx() == 1:
                     my_ch341.reconnect_vtx = 0
                     my_ch341.status = ch341_status.VTX_RECONNECTDONE.value

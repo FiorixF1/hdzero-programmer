@@ -711,7 +711,7 @@ class MyGUI:
                     # self._programmer_frame.update_button_disable()
 
                 elif self.monitor_is_alive == 1 and my_ch341.monitor_connected == 1:  # monitor is alive
-                    # settting
+                    # setting
                     self._monitor_frame.usb_heart()
 
         # --------------------- event_vrx -------------------------------
