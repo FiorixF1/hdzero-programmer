@@ -26,7 +26,7 @@ def get_expected_checksum(ch341):
             # However VTXs fresh from manifacturer have null bytes as padding instead of 0xFF,
             # so calculate two valid CRCs.
             fw_image_00 += bytes([0x00])*(256 - ch341.fw_full_size%256)
-            
+
         ch341.pageNum = (ch341.fw_full_size + (1 << 8) - 1) >> 8
         ch341.read_crc = []
         ch341.read_crc.append(zlib.crc32(fw_image_ff) & 0xffffffff)
@@ -40,7 +40,8 @@ vtx_list = ['foxeer_vtx',
             'hdzero_race_v3',
             'hdzero_whoop',
             'hdzero_whoop_lite',
-            'hdzero_eco']
+            'hdzero_eco',
+            'hdzero_aio5']
 
 version_list = ['1.0.0',
                 '1.1.0',
@@ -50,7 +51,8 @@ version_list = ['1.0.0',
                 '1.5.0',
                 '1.5.0-CITA',
                 '1.6.0',
-                '1.6.0-CITA']
+                '1.6.0-CITA',
+                '1.7.0']
 
 firmware_list = dict()
 

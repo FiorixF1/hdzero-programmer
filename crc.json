@@ -411,5 +411,75 @@
             "0x6fe85d4f",
             "0x56bf707f"
         ]
+    },
+    "foxeer_vtx @ 1.7.0": {
+        "pageNum": 229,
+        "read_crc": [
+            "0x0f9dfcef",
+            "0xe10a2976"
+        ]
+    },
+    "hdzero_freestyle_v1 @ 1.7.0": {
+        "pageNum": 234,
+        "read_crc": [
+            "0xb2e1432c",
+            "0xc1cef0a0"
+        ]
+    },
+    "hdzero_freestyle_v2 @ 1.7.0": {
+        "pageNum": 235,
+        "read_crc": [
+            "0xf4ec16b5",
+            "0x18efbc01"
+        ]
+    },
+    "hdzero_race_v1 @ 1.7.0": {
+        "pageNum": 229,
+        "read_crc": [
+            "0x7335bd31",
+            "0x75e8a5b2"
+        ]
+    },
+    "hdzero_race_v2 @ 1.7.0": {
+        "pageNum": 229,
+        "read_crc": [
+            "0x95d2b662",
+            "0x4bfd5529"
+        ]
+    },
+    "hdzero_race_v3 @ 1.7.0": {
+        "pageNum": 223,
+        "read_crc": [
+            "0x203c09cf",
+            "0xd63c670e"
+        ]
+    },
+    "hdzero_whoop @ 1.7.0": {
+        "pageNum": 219,
+        "read_crc": [
+            "0x9cd1a16f",
+            "0xe3217e7f"
+        ]
+    },
+    "hdzero_whoop_lite @ 1.7.0": {
+        "pageNum": 229,
+        "read_crc": [
+            "0xc6c1961d",
+            "0xb5ee2591"
+        ]
+    },
+    "hdzero_eco @ 1.7.0": {
+        "pageNum": 222,
+        "read_crc": [
+            "0x7d22ba47",
+            "0x11c77f7e"
+        ]
+    },
+    "hdzero_aio5 @ 1.7.0": {
+        "pageNum": 222,
+        "read_crc": [
+            "0xd3e2e2f9",
+            "0x52166446"
+        ]
     }
 }
