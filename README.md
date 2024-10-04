@@ -1,8 +1,19 @@
-## python version
+
+## Clone the repository or download the latest [release](https://github.com/FiorixF1/hdzero-programmer/releases).
+
+#### Cloning
+```
+git clone https://github.com/FiorixF1/hdzero-programmer.git
+cd hdzero-programmer
+```
+
+## Windows
+
+#### Python Version
 
 windows 3.10.5 32-bit
 
-## generate exe
+#### Generate .exe
 
 ```
 pyinstaller ./hdzero_programmer.py --onefile
@@ -10,26 +21,37 @@ pyinstaller ./hdzero_programmer.py --onefile
 
 ## Linux
 
-### install library
+#### Install the ch341 kernel driver
 
 ```
-sudo apt-get install python3-tk python3-pil.imagetk python3-wget
+unzip ch341par_linux_V1.4_20230524.zip
+cd ch341par_linux/driver
+make
+sudo make install
+cd -
 ```
 
-### Install driver
+#### Apply ch341 driver permissions
+- Note: something similar could potentially be perform with udev rules as well.
+- Plugin the hdzero-programmer dongle first (ID 1a86:5512 QinHeng Electronics CH341 in EPP/MEM/I2C mode, EPP/I2C adapter), then
+```
+sudo chmod 777 /dev/ch34x_pis0
+```
 
- execute only once
 
- `cd ./ch341par_linux/driver`
+#### Install python pre-requisites
+```
+sudo apt-get install python3 python3-tk python3-pil.imagetk python3-wget
+```
 
- `make`
+#### Linux execute
+```
+python3 ./hdzero_programmer.py
+```
 
- `sudo make install`
-
-### connect your programmer tool to pc
-
-### Modify device permission
-
-`sudo chmod 777 /dev/ch34x_pis0`
-
-### Run hdzero_programmer.py
+#### Uninstalling the ch341 driver
+- Note: Sometimes the driver will show up as `/dev/ch34x_pis1` or another number.  May need to uninstall, reboot, install.
+```
+cd ch341par_linux/driver
+sudo make uninstall
+```
