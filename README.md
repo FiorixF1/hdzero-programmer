@@ -24,6 +24,8 @@ pyinstaller ./hdzero_programmer.py --onefile
 #### Install the ch341 kernel driver
 
 ```
+# might need to install gcc-12
+# sudo apt install gcc-12
 unzip ch341par_linux_V1.4_20230524.zip
 cd ch341par_linux/driver
 make
@@ -35,14 +37,16 @@ cd -
 - Note: something similar could potentially be perform with udev rules as well.
 - Plugin the hdzero-programmer dongle first (ID 1a86:5512 QinHeng Electronics CH341 in EPP/MEM/I2C mode, EPP/I2C adapter), then
 ```
-sudo chmod 777 /dev/ch34x_pis0
+# sometimes the device shows up as 0, 1, or some other number. Chmod all of them.
+sudo chmod 777 /dev/ch34x_pis*
 ```
-
 
 #### Install python pre-requisites
 ```
 sudo apt-get install python3 python3-tk python3-pil.imagetk python3-wget
 ```
+
+#### Connect programmer to hdzero vtx
 
 #### Linux execute
 ```

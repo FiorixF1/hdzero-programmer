@@ -1,4 +1,5 @@
 import ctypes
+import glob
 import zlib
 import time
 import sys
@@ -87,8 +88,9 @@ class linux_driver(object):
             print("Please check ch341 driver")
 
     def open_device(self):
-        self.dll.CH34xCloseDevice(self.iIndex)
-        self.iIndex = self.dll.CH34xOpenDevice("/dev/ch34x_pis0".encode())
+        # Return first entry. The device number could be different on various systems.
+        device = glob.glob('/dev/ch34x_pis[0-9]*')[0]
+        self.iIndex = self.dll.CH34xOpenDevice(device.encode())
         return self.iIndex
 
     def close_device(self):
