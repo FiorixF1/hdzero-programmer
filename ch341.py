@@ -585,14 +585,24 @@ class ch341_class(object):
 
     # ---------------- event_vrx --------------------------------
     def connect_event_vrx(self):
+        """Open and initialize the CH34x handle for Event VRX programming.
+
+        On success the handle intentionally remains open across firmware
+        download and flashing. Every failed probe releases it immediately.
+        """
         if self.dll_object.open_device() < 0:
             return 0
-        else:
-            # needed on Linux
+        try:
+            # Required by the Linux CH34x driver; harmless on Windows.
             if self.dll_object.get_chip_version() == 0:
+                self.dll_object.close_device()
                 return 0
             self.dll_object.set_stream(0)
             return 1
+        except Exception as exc:
+            print(f"Event VRX connection failed: {exc}")
+            self.dll_object.close_device()
+            return 0
 
     def FlashChipErase(self):
         self.dll_object.set_stream(1)
@@ -665,69 +675,72 @@ class ch341_class(object):
             self.SELECT_FPGA_5680, 1, temp_write_buffer)
 
     def write_event_vrx_fw_to_flash(self, path):
-        file = open(path, "rb")
-        file_size = os.path.getsize(path)   # file_size: 2383867
-        head_size = file.read(8)
-        file5680_size = int(head_size) - 2560    # 58581 = 64141 - 2560
-        print("file: ", path)
+        with open(path, "rb") as fw_file:
+            head_size = fw_file.read(8)
+            file5680_size = int(head_size) - 2560
+            print("file: ", path)
 
-        # erase 5680 flash
-        my_ch341.written_len += 15 * PAGE_SIZE
-        self.dll_object.set_output(0x03, 0xffffffff, self.FLASH_SET_5680)
-        time.sleep(0.01)
-        self.FlashChipErase()
-        my_ch341.written_len += 15 * PAGE_SIZE
-        time.sleep(1)
-
-        # erase fpga flash
-        self.dll_object.set_output(0x03, 0xffffffff, self.FLASH_SET_FPGA)
-        time.sleep(0.01)
-        self.FlashChipErase()
-        my_ch341.written_len += 15 * PAGE_SIZE
-        # time.sleep(65)  # Wait for all flash erase to be completed
-        for i in range(65):
-            time.sleep(1)
-            my_ch341.written_len += 10 * PAGE_SIZE
-
-        # write 5680 data to flash
-        self.dll_object.set_output(0x03, 0xffffffff, self.FLASH_SET_5680)
-        time.sleep(0.01)
-        file.seek(8)
-
-        page = 0
-        while page * self.buffer_size < file5680_size:
-            self.write_buffer = file.read(self.buffer_size)
-            self.write_SPI(self.FLASH_BASE_ADDR + (page * self.buffer_size),
-                           self.write_buffer, len(self.write_buffer))
+            # erase 5680 flash
             my_ch341.written_len += 15 * PAGE_SIZE
-            time.sleep(0.1)
-            page += 1
+            self.dll_object.set_output(0x03, 0xffffffff, self.FLASH_SET_5680)
+            time.sleep(0.01)
+            self.FlashChipErase()
+            my_ch341.written_len += 15 * PAGE_SIZE
+            time.sleep(1)
 
-        # write 5680 last page data
-        page -= 1
-        self.write_buffer = file.read(
-            file5680_size - (page * self.buffer_size))
-        self.write_SPI(self.FLASH_BASE_ADDR + (page + 1) * self.buffer_size,
-                       self.write_buffer, file5680_size - (page * self.buffer_size))
-        time.sleep(1)
-        my_ch341.written_len += 15 * PAGE_SIZE
+            # erase fpga flash
+            self.dll_object.set_output(0x03, 0xffffffff, self.FLASH_SET_FPGA)
+            time.sleep(0.01)
+            self.FlashChipErase()
+            my_ch341.written_len += 15 * PAGE_SIZE
+            for _ in range(65):
+                time.sleep(1)
+                my_ch341.written_len += 10 * PAGE_SIZE
 
-        # write fpga data to flash
-        self.dll_object.set_output(0x03, 0xffffffff, self.FLASH_SET_FPGA)
-        page = 0
-        while True:
-            self.write_buffer = file.read(self.buffer_size)
-            self.write_SPI(self.FLASH_BASE_ADDR + (page * self.buffer_size),
-                           self.write_buffer, len(self.write_buffer))
-            time.sleep(0.1)
-            my_ch341.written_len += 9 * PAGE_SIZE
+            # write 5680 data to flash
+            self.dll_object.set_output(0x03, 0xffffffff, self.FLASH_SET_5680)
+            time.sleep(0.01)
+            fw_file.seek(8)
 
-            page += 1
-            if len(self.write_buffer) != self.buffer_size:
-                break
+            page = 0
+            remaining = file5680_size
+            while remaining > self.buffer_size:
+                self.write_buffer = fw_file.read(self.buffer_size)
+                if len(self.write_buffer) != self.buffer_size:
+                    raise IOError("Unexpected end of Event VRX firmware (5680 image)")
+                self.write_SPI(self.FLASH_BASE_ADDR + (page * self.buffer_size),
+                               self.write_buffer, self.buffer_size)
+                my_ch341.written_len += 15 * PAGE_SIZE
+                time.sleep(0.1)
+                page += 1
+                remaining -= self.buffer_size
 
-        file.flush()
-        file.close()
+            # Write the final page (also handles images whose size is an
+            # exact multiple of buffer_size, without writing past the image).
+            if remaining > 0:
+                self.write_buffer = fw_file.read(remaining)
+                if len(self.write_buffer) != remaining:
+                    raise IOError("Unexpected end of Event VRX firmware (5680 final page)")
+                self.write_SPI(self.FLASH_BASE_ADDR + (page * self.buffer_size),
+                               self.write_buffer, remaining)
+            time.sleep(1)
+            my_ch341.written_len += 15 * PAGE_SIZE
+
+            # write FPGA data to flash
+            self.dll_object.set_output(0x03, 0xffffffff, self.FLASH_SET_FPGA)
+            page = 0
+            while True:
+                self.write_buffer = fw_file.read(self.buffer_size)
+                if not self.write_buffer:
+                    break
+                self.write_SPI(self.FLASH_BASE_ADDR + (page * self.buffer_size),
+                               self.write_buffer, len(self.write_buffer))
+                time.sleep(0.1)
+                my_ch341.written_len += 9 * PAGE_SIZE
+                page += 1
+                if len(self.write_buffer) != self.buffer_size:
+                    break
+
         self.dll_object.set_output(0x03, 0xffffffff, self.FLASH_SET_FPGA)
 
 
@@ -818,26 +831,103 @@ def ch341_thread_proc():
                 my_ch341.monitor_connected = 0
 
         # ---------------------- event_vrx ------------------------------------
-        elif my_ch341.status == ch341_status.EVENT_VRX_DISCONNECTED.value:  # connect event vrx
+        elif my_ch341.status == ch341_status.EVENT_VRX_DISCONNECTED.value:
             if my_ch341.connect_event_vrx() == 1:
                 my_ch341.status = ch341_status.EVENT_VRX_CONNECTED.value
-
-        elif my_ch341.status == ch341_status.EVENT_VRX_UPDATE.value:  # update event_vrx
-            file = open(my_ch341.fw_path, "rb")
-            file_size = os.path.getsize(my_ch341.fw_path)
-            head_size = file.read(8)
-            try:
-                file5680_size = int(head_size) - 2560
-            except:
-                file5680_size = 65536
-                my_ch341.status = ch341_status.EVENT_VRX_FW_ERROR.value
-
-            file.close()
-            if file_size > 10000000 or file5680_size >= 65536:
-                my_ch341.status = ch341_status.EVENT_VRX_FW_ERROR.value
             else:
+                time.sleep(0.2)
+
+        elif my_ch341.status == ch341_status.EVENT_VRX_UPDATE.value:
+            try:
+                with open(my_ch341.fw_path, "rb") as fw_file:
+                    file_size = os.path.getsize(my_ch341.fw_path)
+                    head_size = fw_file.read(8)
+                try:
+                    file5680_size = int(head_size) - 2560
+                except (TypeError, ValueError):
+                    file5680_size = 65536
+
+                if file_size <= 0 or file_size > 10000000 or file5680_size < 0 or file5680_size >= 65536:
+                    raise ValueError("Invalid Event VRX firmware image")
+
+                # The connection is established before download and retained
+                # until this point. Re-open defensively if the handle was
+                # released while the download was in progress.
+                if my_ch341.dll_object.open_device() < 0:
+                    raise RuntimeError("Unable to open CH34x device for Event VRX flash")
                 my_ch341.write_event_vrx_fw_to_flash(my_ch341.fw_path)
                 my_ch341.status = ch341_status.EVENT_VRX_UPDATEDONE.value
+            except Exception as exc:
+                print(f"Event VRX flash failed: {exc}")
+                my_ch341.status = ch341_status.EVENT_VRX_FW_ERROR.value
+            finally:
+                if getattr(my_ch341.dll_object, "is_open", False):
+                    try:
+                        my_ch341.flash_release()
+                    except Exception as exc:
+                        print(f"Event VRX flash release failed: {exc}")
+                my_ch341.dll_object.close_device()
+
+        # ---------------------- Radio ------------------------------------
+        elif my_ch341.status == ch341_status.RADIO_DISCONNECTED.value:
+            try:
+                # 1 = an HDZero Radio answered ATPING; 2 = another STM32
+                # serial device was found but did not identify as HDZero.
+                if my_radio.radio_is_active() == 1:
+                    my_ch341.status = ch341_status.RADIO_CONNECTED.value
+                else:
+                    time.sleep(0.2)
+            except Exception as exc:
+                print(f"Radio detection failed: {exc}")
+                my_radio.close()
+                time.sleep(0.2)
+
+        elif my_ch341.status == ch341_status.RADIO_UPDATE_ELRS_TX.value:
+            try:
+                if my_ch341.parse_radio_fw(my_ch341.fw_path) == 0:
+                    my_ch341.status = ch341_status.RADIO_FW_ERROR.value
+                else:
+                    my_ch341.fw_index = 1
+                    my_ch341.update_error_flag = 0
+                    if not my_radio.program_elrs_tx():
+                        my_ch341.update_error_flag = 1
+                        print("Radio ELRS TX firmware update failed")
+                    my_ch341.status = ch341_status.RADIO_UPDATE_ELRS_BACKPACK.value
+            except Exception as exc:
+                print(f"Radio ELRS TX update failed: {exc}")
+                my_radio.close()
+                my_ch341.update_error_flag = 1
+                my_ch341.status = ch341_status.RADIO_UPDATE_ELRS_BACKPACK.value
+
+        elif my_ch341.status == ch341_status.RADIO_UPDATE_ELRS_BACKPACK.value:
+            my_ch341.written_len = 400
+            my_ch341.fw_index = 2
+            try:
+                if not my_radio.program_elrs_backpack():
+                    my_ch341.update_error_flag += 2
+                    print("Radio ELRS Backpack firmware update failed")
+            except Exception as exc:
+                print(f"Radio ELRS Backpack update failed: {exc}")
+                my_radio.close()
+                my_ch341.update_error_flag += 2
+            my_ch341.status = ch341_status.RADIO_UPDATE_STM32.value
+
+        elif my_ch341.status == ch341_status.RADIO_UPDATE_STM32.value:
+            my_ch341.written_len = 800
+            my_ch341.fw_index = 3
+            try:
+                stm32_ok = my_radio.program_stm32()
+            except Exception as exc:
+                print(f"Radio STM32 update failed: {exc}")
+                my_radio.close()
+                stm32_ok = False
+
+            if not stm32_ok:
+                my_ch341.status = ch341_status.RADIO_UPDATE_STM32_FAILED.value
+            elif my_ch341.update_error_flag:
+                my_ch341.status = ch341_status.RADIO_UPDATE_ELRS_FAILED.value
+            else:
+                my_ch341.status = ch341_status.RADIO_UPDATE_DONE.value
         # ---------------------- Radio ------------------------------------
         elif my_ch341.status == ch341_status.RADIO_DISCONNECTED.value:  # connect radio
             if my_radio.radio_is_active() != 0:

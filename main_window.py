@@ -303,6 +303,7 @@ class MyGUI:
             else:
                 my_download.to_stop = 1
                 my_ch341.status = ch341_status.IDLE.value
+                my_ch341.dll_object.close_device()
 
                 self.notebook_enable()
 
@@ -336,6 +337,7 @@ class MyGUI:
                 self._statusbar_frame.progress_bar_set_value(0)
             else:
                 my_download.to_stop = 1
+                my_radio.close()
 
                 self.notebook_enable()
                 self._programmer_frame.update_button_set_text_update(
@@ -604,7 +606,7 @@ class MyGUI:
                 self._programmer_frame.detect_button_enable()
                 self._statusbar_frame.progress_bar_set_value(100)
                 self._statusbar_frame.status_label_set_text(
-                    "Firmware updated. You can connect another VTX or detect the firmware.", "#06b025")
+                    "Firmware updated. You can now detect the VTX or flash another unit.", "#06b025")
 
             elif my_ch341.status == ch341_status.VTX_UPDATE_FAILED.value:
                 my_ch341.status = ch341_status.IDLE.value
@@ -799,6 +801,7 @@ class MyGUI:
             elif my_download.status == download_status.DOWNLOAD_EVENT_VRX_FW_FAILED.value:
                 my_download.status = download_status.IDLE.value
                 my_ch341.status = ch341_status.IDLE.value
+                my_ch341.dll_object.close_device()
 
                 self.notebook_enable()
 
@@ -1028,6 +1031,8 @@ class MyGUI:
 def on_closing():
     my_download.status = download_status.DOWNLOAD_EXIT.value
     my_ch341.status = ch341_status.STATUS_EXIT.value
+    my_ch341.dll_object.close_device()
+    my_radio.close()
     sys.exit()
 
 

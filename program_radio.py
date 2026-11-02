@@ -1,3 +1,4 @@
+import serial
 import serial.tools.list_ports
 import time
 import esptool
@@ -5,181 +6,178 @@ import sys
 from xmodem import XMODEM
 
 
-def flash_esp_api(
-    port,
-    baud,
-    chip,
-    flash_args,
-):
-    """
-    flash_args:
-        [
-            (0x1000, "bootloader.bin"),
-            (0x8000, "partition-table.bin"),
-            (0x10000, "app.bin"),
-        ]
-    """
-
-    # 等价于命令行参数
-    argv = [
-        "--chip", chip,
-        "--port", port,
-        "--baud", str(baud),
-        "write-flash",
-    ]
-
+def flash_esp_api(port, baud, chip, flash_args):
+    """Program an ESP-family target through esptool."""
+    argv = ["--chip", chip, "--port", port, "--baud", str(baud), "write-flash"]
     for addr, path in flash_args:
-        argv.append(hex(addr))
-        argv.append(path)
+        argv.extend((hex(addr), path))
 
-    # esptool 内部就是解析 sys.argv
     old_argv = sys.argv
     try:
         sys.argv = ["esptool.py"] + argv
         esptool.main()
-    except:
+        return True
+    except (Exception, SystemExit) as exc:
+        print(f"ESP flash failed on {port}: {exc}")
         return False
     finally:
         sys.argv = old_argv
-    
-    return True
 
 
 class radio_class(object):
     def __init__(self):
-        self.ser = ''
+        self.ser = None
         self.status = 0
-        self.com = ''
+        self.com = ""
 
-    def find_word_in_string(self, s, word):
-        try:
-            words = s.split()
-        except:
+    def find_word_in_string(self, value, word):
+        if not isinstance(value, str):
             return 0
+        return int(word in value.split())
 
-        for w in words:
-            if w == word:
-                return 1
-        return 0
+    def _close_serial(self):
+        """Close the currently held serial port, if any."""
+        ser = self.ser
+        self.ser = None
+        if ser is not None:
+            try:
+                if ser.is_open:
+                    ser.close()
+            except Exception as exc:
+                print(f"Radio serial close failed: {exc}")
 
-    def serial_tx(self, str):
-        self.ser.write(str.encode('utf-8'))
+    def close(self):
+        self._close_serial()
+
+    def serial_tx(self, value):
+        self.ser.write(value.encode("utf-8"))
 
     def serial_rx(self, sleep_sec):
-        data_received = b''
         time.sleep(sleep_sec)
+        if self.ser is None:
+            return ""
+        chunks = []
         while self.ser.in_waiting:
-            data_received = self.ser.read(self.ser.in_waiting)
-            return data_received.decode('utf-8')
+            chunks.append(self.ser.read(self.ser.in_waiting))
+        return b"".join(chunks).decode("utf-8", errors="replace")
 
     def getc(self, size, timeout=1):
+        if self.ser is None:
+            return None
         return self.ser.read(size)
 
     def putc(self, data, timeout=1):
+        if self.ser is None:
+            return 0
         return self.ser.write(data)
 
-    def search_stm32_port(self):
-        ports = list(serial.tools.list_ports.comports())
-        for i in range(0, len(ports)):
-            if (self.find_word_in_string(ports[i].description, 'STMicroelectronics')):
-                self.com = ports[i].name
-                time.sleep(1)
-                try:
-                    self.ser = serial.Serial(self.com, 115200, timeout=2)
-                    return 1
-                except:
-                    return 0
-        return 0
-
-    def search_elrs_port(self):
-        ports = list(serial.tools.list_ports.comports())
-        for i in range(0, len(ports)):
-            if (self.find_word_in_string(ports[i].description, 'CH340')):
-                self.com = ports[i].name
-                time.sleep(1)
+    def _search_port(self, description_token):
+        # Do not leave a previous port open while changing operating modes.
+        self._close_serial()
+        for port_info in serial.tools.list_ports.comports():
+            if description_token not in (port_info.description or ""):
+                continue
+            self.com = port_info.device or port_info.name
+            time.sleep(0.25)
+            try:
                 self.ser = serial.Serial(self.com, 115200, timeout=2)
                 return 1
+            except (serial.SerialException, OSError) as exc:
+                print(f"Unable to open radio port {self.com}: {exc}")
+                self._close_serial()
         return 0
+
+    def search_stm32_port(self):
+        return self._search_port("STMicroelectronics")
+
+    def search_elrs_port(self):
+        return self._search_port("CH340")
 
     def unzip_radio_firmware(self, file_path, dest_folder):
         import zipfile
-        with zipfile.ZipFile(file_path, 'r') as zip_ref:
+        with zipfile.ZipFile(file_path, "r") as zip_ref:
             zip_ref.extractall(dest_folder)
 
     def radio_is_active(self):
         if self.search_stm32_port() == 0:
             return 0
-
-        cmd = "ATPING\r\n"
-        self.ser.write(cmd.encode('utf-8'))
-        rx = self.serial_rx(1)
-
-        self.ser.close()
-        if self.find_word_in_string(rx, "HDZero"):
-            return 1
-        else:
-            return 2
+        try:
+            self.ser.write(b"ATPING\r\n")
+            rx = self.serial_rx(1)
+            return 1 if self.find_word_in_string(rx, "HDZero") else 2
+        except Exception as exc:
+            print(f"Radio detection failed: {exc}")
+            return 0
+        finally:
+            self._close_serial()
 
     def program_stm32(self):
-
-        # enter bootloader mode
+        # Ask the radio controller to reboot into its STM32 bootloader.
         if self.search_stm32_port() == 0:
             return False
-        cmd = "ATPROG\r\n"
-        self.ser.write(cmd.encode('utf-8'))
-        self.ser.write(cmd.encode('utf-8'))
-        self.ser.write(cmd.encode('utf-8'))
-        time.sleep(0.5)
-        self.ser.close()
-        time.sleep(0.5)
-
-        # start programming
-        if self.search_stm32_port() == 0:
-            return False
-        time.sleep(0.2)
-        cmd = "XXX"
-        self.ser.write(cmd.encode('utf-8'))
-        self.ser.write(cmd.encode('utf-8'))
-        self.ser.write(cmd.encode('utf-8'))
-        time.sleep(0.5)
-        self.serial_rx(0)
-        
         try:
-            stream = open("resource/hdzero_radio_stm32.bin", "rb")
-            modem = XMODEM(self.getc, self.putc)
-            modem.send(stream)
-        except:
+            command = b"ATPROG\r\n"
+            self.ser.write(command * 3)
+            time.sleep(0.5)
+        except Exception as exc:
+            print(f"Unable to enter STM32 bootloader: {exc}")
             return False
+        finally:
+            self._close_serial()
 
-        cmd = "ccc"
-        self.ser.write(cmd.encode('utf-8'))
-        self.ser.write(cmd.encode('utf-8'))
-        self.ser.write(cmd.encode('utf-8'))
         time.sleep(0.5)
-        self.ser.close()
-        return True
-
-
-
-    def program_elrs_tx(self):
         if self.search_stm32_port() == 0:
             return False
 
-        cmd = "ATPGTX\r\n"
-        self.ser.write(cmd.encode('utf-8'))
-        time.sleep(0.2)
-        self.ser.close()
+        try:
+            time.sleep(0.2)
+            self.ser.write(b"XXX" * 3)
+            time.sleep(0.5)
+            self.serial_rx(0)
+            with open("resource/hdzero_radio_stm32.bin", "rb") as stream:
+                modem = XMODEM(self.getc, self.putc)
+                if not modem.send(stream):
+                    print("XMODEM transfer of STM32 firmware failed")
+                    return False
+            self.ser.write(b"ccc" * 3)
+            time.sleep(0.5)
+            return True
+        except Exception as exc:
+            print(f"STM32 firmware update failed: {exc}")
+            return False
+        finally:
+            self._close_serial()
+
+    def _program_elrs(self, command, chip, flash_args):
+        if self.search_stm32_port() == 0:
+            return False
+        try:
+            self.ser.write((command + "\r\n").encode("ascii"))
+            time.sleep(0.2)
+        except Exception as exc:
+            print(f"Unable to switch Radio to {chip} bootloader: {exc}")
+            return False
+        finally:
+            self._close_serial()
 
         time.sleep(1)
         if self.search_elrs_port() == 0:
             return False
-        self.ser.close()
-
+        # esptool opens the port itself; release our discovery handle first.
+        port = self.com
+        self._close_serial()
         return flash_esp_api(
-            port=self.ser.port,
+            port=port,
             baud=460800,
-            chip="esp32",
-            flash_args=[
+            chip=chip,
+            flash_args=flash_args,
+        )
+
+    def program_elrs_tx(self):
+        return self._program_elrs(
+            "ATPGTX",
+            "esp32",
+            [
                 (0x1000, "resource/elrs_tx/bootloader.bin"),
                 (0x8000, "resource/elrs_tx/partitions.bin"),
                 (0xe000, "resource/elrs_tx/boot_app0.bin"),
@@ -188,24 +186,10 @@ class radio_class(object):
         )
 
     def program_elrs_backpack(self):
-        if self.search_stm32_port() == 0:
-            return False
-
-        cmd = "ATPGBP\r\n"
-        self.ser.write(cmd.encode('utf-8'))
-        time.sleep(0.2)
-        self.ser.close()
-
-        time.sleep(1)
-        if self.search_elrs_port() == 0:
-            return False
-        self.ser.close()
-
-        return flash_esp_api(
-            port=self.ser.port,
-            baud=460800,
-            chip="esp32c3",
-            flash_args=[
+        return self._program_elrs(
+            "ATPGBP",
+            "esp32c3",
+            [
                 (0x0000, "resource/elrs_backpack/bootloader.bin"),
                 (0x8000, "resource/elrs_backpack/partitions.bin"),
                 (0xe000, "resource/elrs_backpack/boot_app0.bin"),

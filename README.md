@@ -11,7 +11,7 @@ cd hdzero-programmer
 
 #### Python Version
 
-Windows 3.10.5 32-bit (but it should work also at 64 bit)
+Windows 3.10.5 32-bit (but it should work also on 64 bit)
 
 #### Create venv
 
@@ -40,7 +40,7 @@ cd -
 ```
 
 #### Apply ch341 driver permissions
-- Note: something similar could potentially be perform with udev rules as well. In my machine it worked with
+- Note: something similar could potentially be performed with udev rules as well. On my machine it worked with
 ```
 sudo nano /etc/udev/rules.d/99-ch34x-pis.rules
 SUBSYSTEM=="usbmisc", KERNEL=="ch34x_pis*", MODE="0666"
