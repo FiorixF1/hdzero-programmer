@@ -7,9 +7,14 @@ vtx_releases
 vtx_cita_releases
 event_vrx_releases
 monitor_releases
+radio_releases
 FW
 FW.zip
 MONITOR.bin
 dump.bin
+hdzero_radio_stm32.bin
 .spec
-ch341par_linux
+CH341PAR_LINUX
+elrs_backpack
+elrs_tx
+local_path

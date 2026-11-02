@@ -7,8 +7,10 @@ from tkinter import ttk
 from frame_vtx import frame_vtx
 from frame_monitor import frame_monitor
 from frame_event_vrx import frame_event_vrx
+from frame_radio import frame_radio
 from frame_programmer import frame_programmer
 from frame_statusbar import frame_statusbar
+from program_radio import my_radio
 
 from download import *
 from parse_file import *
@@ -18,6 +20,7 @@ from ch341 import my_ch341
 import base64
 from icon32 import icon32
 import io
+import program_radio
 
 
 
@@ -26,7 +29,7 @@ class MyGUI:
     def __init__(self, init_window_name):
         self.winWidth = 800
         self.winHeight = 600
-        self.title = "HDZero Programmer " + "V2.0.0 CITA"
+        self.title = "HDZero Programmer " + "V2.1.0 CITA"
 
         self._programmer_frame = None
         self._main_window = init_window_name
@@ -71,6 +74,7 @@ class MyGUI:
         self.init_vtx_frame()
         self.init_monitor_frame()
         self.init_event_vrx_frame()
+        self.init_radio_frame()
         self._tabCtrl.select(self._vtx_frame.frame())
         self._tabCtrl.grid(row=0, column=0, sticky="nsew")
         self._tabCtrl.bind("<<NotebookTabChanged>>", self.on_tab_changed)
@@ -102,6 +106,9 @@ class MyGUI:
 
     def init_event_vrx_frame(self):
         self._event_vrx_frame = frame_event_vrx(self._tabCtrl)
+
+    def init_radio_frame(self):
+        self._radio_frame = frame_radio(self._tabCtrl)
 
     def init_statusbar(self):
         self._statusbar_frame = frame_statusbar(self._main_window)
@@ -150,6 +157,13 @@ class MyGUI:
             )]
             self._programmer_frame.online_fw_button_set_str(
                 self._programmer_frame.version_combobox.get())
+        elif self.current_selected_tab() == 3:
+            self._programmer_frame.update_button_enable()
+            self._programmer_frame.detect_button_disable()
+            self._programmer_frame.url = my_parse.radio_info[self._programmer_frame.version_combobox.get(
+            )]
+            self._programmer_frame.online_fw_button_set_str(
+                self._programmer_frame.version_combobox.get())
 
     def on_load_local_firmware(self):
         self._programmer_frame.online_fw_button_show()
@@ -176,8 +190,14 @@ class MyGUI:
             self._programmer_frame.mode = 1
             my_ch341.fw_path = self._programmer_frame.local_file_path
 
+        elif self.current_selected_tab() == 3:
+            self._programmer_frame.update_button_enable()
+            self._programmer_frame.detect_button_disable()
+            self._programmer_frame.mode = 1
+            my_ch341.fw_path = self._programmer_frame.local_file_path
+
     def on_update(self):
-        if self.current_selected_tab() == 0:
+        if self.current_selected_tab() == 0: # vtx
 
             if self._programmer_frame.is_cancel == 0:
                 my_ch341.status = ch341_status.VTX_DISCONNECTED.value  # to connect vtx
@@ -217,7 +237,7 @@ class MyGUI:
                 self._statusbar_frame.label_hidden()
                 self._statusbar_frame.progress_bar_set_value(0)
 
-        elif self.current_selected_tab() == 1:
+        elif self.current_selected_tab() == 1: # monitor
             if self._programmer_frame.is_cancel == 0:
                 self.is_update_monitor = 1
                 my_ch341.monitor_connected = 0
@@ -262,7 +282,7 @@ class MyGUI:
                 self._statusbar_frame.label_hidden()
                 self._statusbar_frame.progress_bar_set_value(0)
 
-        elif self.current_selected_tab() == 2:
+        elif self.current_selected_tab() == 2: # event vrx
             if self._programmer_frame.is_cancel == 0:
                 my_ch341.status = ch341_status.EVENT_VRX_DISCONNECTED.value
                 my_download.to_stop = 0
@@ -286,7 +306,39 @@ class MyGUI:
 
                 self._programmer_frame.update_button_set_text_update(
                     "Event VRX")
-                self._programmer_frame.update_button_disable()
+                self._programmer_frame.update_button_enable()
+                self._programmer_frame.detect_button_disable()
+                self._programmer_frame.version_combobox_enable()
+                self._programmer_frame.local_fw_button_enable()
+                self._programmer_frame.online_fw_button_enable(
+                    self.network_error)
+
+                self._statusbar_frame.label_hidden()
+                self._statusbar_frame.progress_bar_set_value(0)
+
+        elif self.current_selected_tab() == 3: # radio
+            if self._programmer_frame.is_cancel == 0:
+                my_ch341.status = ch341_status.RADIO_DISCONNECTED.value
+                my_download.to_stop = 0
+
+                self.notebook_disable()
+
+                self._programmer_frame.update_button_set_text_cancel()
+                self._programmer_frame.update_button_enable()
+                self._programmer_frame.detect_button_disable()
+                self._programmer_frame.version_combobox_disable()
+                self._programmer_frame.local_fw_button_disable()
+                self._programmer_frame.online_fw_button_disable()
+                self._statusbar_frame.status_label_set_text(
+                    "Connecting Radio ...", "SystemButtonFace")
+                self._statusbar_frame.progress_bar_set_value(0)
+            else:
+                my_download.to_stop = 1
+
+                self.notebook_enable()
+                self._programmer_frame.update_button_set_text_update(
+                    "Radio")
+                self._programmer_frame.update_button_enable()
                 self._programmer_frame.detect_button_disable()
                 self._programmer_frame.version_combobox_enable()
                 self._programmer_frame.local_fw_button_enable()
@@ -297,33 +349,36 @@ class MyGUI:
                 self._statusbar_frame.progress_bar_set_value(0)
 
     def get_firmware_from_CRC(self, crc_table):
-        if len(my_parse.crc_database) == 0:
-            return ("Could not verify firmware because the database has not been loaded", "yellow")
+        if not my_parse.crc_database:
+            return ("CRC database not loaded; firmware cannot be verified", "yellow")
         for firmware, metadata in my_parse.crc_database.items():
-            if crc_table[metadata["pageNum"]] in metadata["read_crc"]:
-                if firmware.endswith("CITA"):
-                    return (firmware + " - Firmware is valid", "green")
-                else:
-                    return (firmware + " - Firmware is NOT valid", "red")
-        else:
-            return ("Unknown firmware" + " - Firmware is NOT valid", "red")
+            try:
+                page = int(metadata["pageNum"])
+                known_crcs = metadata["read_crc"]
+                if page in crc_table and crc_table[page] in known_crcs:
+                    if firmware.upper().endswith("CITA"):
+                        return (firmware + " - Coppa Italia firmware detected", "green")
+                    return (firmware + " - Official HDZero firmware detected, NOT VALID for Coppa Italia", "red")
+            except (KeyError, TypeError, ValueError):
+                continue
+        return ("Unknown firmware - NOT VALID for Coppa Italia", "red")
 
     def on_detect(self):
-        if self.current_selected_tab() == 0:
-
-            if self._programmer_frame.is_cancel == 0:
-                # just do it in the main thread, code is too messy to do better
-                if my_ch341.connect_vtx() == 1:
-                    my_ch341.flash_read_file()
-                    self._statusbar_frame.status_label_set_text(*self.get_firmware_from_CRC(my_ch341.crc_table))
-                else:
-                    self._statusbar_frame.status_label_set_text(
-                        "VTX not found. Check connection", "red")
+        if self.current_selected_tab() != 0:
+            return
+        if my_ch341.connect_vtx() == 1:
+            my_ch341.flash_read_file()
+            self._statusbar_frame.status_label_set_text(
+                *self.get_firmware_from_CRC(my_ch341.crc_table))
+        else:
+            self._statusbar_frame.status_label_set_text(
+                "VTX not found. Check connection", "red")
 
     def on_tab_changed(self, event):
         print("Selected tab:", self.current_selected_tab())
         self._statusbar_frame.label_hidden()
         if self.current_selected_tab() == 0:
+            self._programmer_frame.detect_button_enable()
             self._vtx_frame.radio_button_reset()  # select first vtx target
 
             self._programmer_frame.version_combobox_update_values("")
@@ -339,6 +394,7 @@ class MyGUI:
             my_ch341.status = ch341_status.IDLE.value
 
         elif self.current_selected_tab() == 1:
+            self._programmer_frame.detect_button_disable()
             self._monitor_frame.setting_disable()
 
             version_list = list(my_parse.monitor_info.keys())
@@ -357,6 +413,7 @@ class MyGUI:
             # to connect Monitor
             my_ch341.status = ch341_status.MONITOR_CHECK_ALIVE.value
         elif self.current_selected_tab() == 2:
+            self._programmer_frame.detect_button_disable()
             version_list = list(my_parse.event_vrx_info.keys())
             self._programmer_frame.version_combobox_update_values(version_list)
             self._programmer_frame.version_combobox_enable()
@@ -368,6 +425,17 @@ class MyGUI:
             self._programmer_frame.online_fw_button_show()
 
             my_ch341.status = ch341_status.IDLE.value
+        elif self.current_selected_tab() == 3:
+            self._programmer_frame.detect_button_disable()
+            version_list = list(my_parse.radio_info.keys())
+            self._programmer_frame.version_combobox_update_values(version_list)
+            self._programmer_frame.version_combobox_enable()
+            self._programmer_frame.version_combobox_set_default()
+            self._programmer_frame.local_fw_button_enable()
+            self._programmer_frame.update_button_set_text_update("Radio")
+            self._programmer_frame.update_button_disable()
+            self._programmer_frame.detect_button_disable()
+            self._programmer_frame.online_fw_button_show()
 
         self._programmer_frame.deselect()
         self._programmer_frame.online_fw_button_set_str_default()
@@ -430,12 +498,13 @@ class MyGUI:
         if my_download.status == download_status.FILE_PARSE.value:
             my_download.status = download_status.IDLE.value
             my_parse.parse_vtx_common()
-            ret0 = my_parse.parse_vtx_releases()
-            ret1 = my_parse.parse_event_vrx_releases()
-            ret2 = my_parse.parse_monitor_releases()
-            ret3 = my_parse.parse_vtx_tragets_image(
+            ret0 = my_parse.parse_vtx_tragets_image(
                 len(list(my_parse.vtx_info.keys())))
-            ret4 = my_parse.parse_crc_database()
+            ret1 = my_parse.parse_vtx_releases()
+            ret2 = my_parse.parse_monitor_releases()
+            ret3 = my_parse.parse_event_vrx_releases()
+            ret4 = my_parse.parse_radio_releases()
+            crc_ret = my_parse.parse_crc_database()
 
             if ret0 == 0 or ret1 == 0 or ret2 == 0 or ret3 == 0 or ret4 == 0:
                 self.network_error = 1
@@ -809,6 +878,151 @@ class MyGUI:
                 self._statusbar_frame.progress_bar_set_value(0)
                 self._statusbar_frame.status_label_set_text(
                     "Firmware update failed. Firmware error", "red")
+
+        # --------------------- radio -------------------------------
+        if self.current_selected_tab() == 3:
+            # download
+            if my_download.status == download_status.DOWNLOAD_RADIO_FW_DONE.value:
+                my_download.status = download_status.IDLE.value
+                my_ch341.fw_path = my_download.save_path
+                my_ch341.written_len = 0
+                my_ch341.to_write_len = 1000
+
+                self._statusbar_frame.label_hidden()
+                self._programmer_frame.update_button_set_text_update(
+                    "Radio")
+                self._programmer_frame.update_button_disable()
+                self._programmer_frame.detect_button_disable()
+                my_ch341.status = ch341_status.RADIO_UPDATE_ELRS_TX.value
+            elif my_download.status == download_status.DOWNLOAD_RADIO_FW_FAILED.value:
+                my_download.status = download_status.IDLE.value
+                my_ch341.status = ch341_status.IDLE.value
+
+                self.notebook_enable()
+
+                self._programmer_frame.version_combobox_enable()
+                self._programmer_frame.online_fw_button_enable(
+                    self.network_error)
+                self._programmer_frame.version_combobox_set_default()
+                self._programmer_frame.local_fw_button_enable()
+                self._programmer_frame.local_fw_button_set_str_default()
+                self._programmer_frame.update_button_set_text_update(
+                    "Radio")
+                # self._programmer_frame.update_button_disable()
+                self._programmer_frame.detect_button_disable()
+                self._programmer_frame.deselect()
+
+                self._statusbar_frame.progress_bar_set_value(0)
+                self._statusbar_frame.status_label_set_text(
+                    "Firmware update failed. Network error", "red")
+
+            # update
+            if my_ch341.status == ch341_status.RADIO_CONNECTED.value:  # radio is connected
+                my_ch341.status = ch341_status.IDLE.value
+                if self._programmer_frame.mode == 0:
+                    my_download.url = self._programmer_frame.url
+                    my_download.save_path = "resource/FW"
+                    my_download.status = download_status.DOWNLOAD_RADIO_FW.value  # download url
+                    self._statusbar_frame.status_label_set_text(
+                        "Downloading Firmware ...", "SystemButtonFace")
+                else:
+                    my_ch341.written_len = 0
+                    my_ch341.to_write_len = 1000
+                    self._programmer_frame.update_button_set_text_update(
+                        "Radio")
+                    self._programmer_frame.update_button_disable()
+                    self._programmer_frame.detect_button_disable()
+                    self._statusbar_frame.label_hidden()
+                    my_ch341.status = ch341_status.RADIO_UPDATE_ELRS_TX.value
+            
+            elif my_ch341.status == ch341_status.RADIO_UPDATE_ELRS_TX.value or my_ch341.status == ch341_status.RADIO_UPDATE_ELRS_BACKPACK.value:  # radio refresh progress bar
+                if my_ch341.written_len < my_ch341.fw_index * 400 and my_ch341.written_len < my_ch341.to_write_len:
+                        my_ch341.written_len += 1
+                value = (my_ch341.written_len /
+                         my_ch341.to_write_len * 100) % 101
+                self._statusbar_frame.progress_bar_set_value(value)
+            
+            elif my_ch341.status == ch341_status.RADIO_UPDATE_STM32.value:
+                my_ch341.written_len += 2
+                if my_ch341.written_len > my_ch341.to_write_len:
+                    my_ch341.written_len = my_ch341.to_write_len
+
+                value = (my_ch341.written_len /
+                         my_ch341.to_write_len * 100) % 101
+                self._statusbar_frame.progress_bar_set_value(value)
+
+            elif my_ch341.status == ch341_status.RADIO_FW_ERROR.value:
+                my_ch341.status = ch341_status.IDLE.value
+
+                self.notebook_enable()
+
+                self._programmer_frame.update_button_set_text_update(
+                    "Radio")
+                self._programmer_frame.update_button_enable()
+                self._programmer_frame.detect_button_disable()
+                self._programmer_frame.version_combobox_enable()
+                self._programmer_frame.local_fw_button_enable()
+                self._programmer_frame.online_fw_button_enable(
+                    self.network_error)
+
+                self._statusbar_frame.progress_bar_set_value(0)
+                self._statusbar_frame.status_label_set_text(
+                    "Firmware update failed, Firmware error.", "red")
+
+            elif my_ch341.status == ch341_status.RADIO_UPDATE_STM32_FAILED.value:
+                my_ch341.status = ch341_status.IDLE.value
+
+                self.notebook_enable()
+
+                self._programmer_frame.update_button_set_text_update(
+                    "Radio")
+                self._programmer_frame.update_button_enable()
+                self._programmer_frame.detect_button_disable()
+                self._programmer_frame.version_combobox_enable()
+                self._programmer_frame.local_fw_button_enable()
+                self._programmer_frame.online_fw_button_enable(
+                    self.network_error)
+
+                self._statusbar_frame.progress_bar_set_value(0)
+                self._statusbar_frame.status_label_set_text(
+                    "Update firmware failed, repower and try again.", "red")
+
+            elif my_ch341.status == ch341_status.RADIO_UPDATE_ELRS_FAILED.value:
+                my_ch341.status = ch341_status.IDLE.value
+
+                self.notebook_enable()
+
+                self._programmer_frame.update_button_set_text_update(
+                    "Radio")
+                self._programmer_frame.update_button_enable()
+                self._programmer_frame.detect_button_disable()
+                self._programmer_frame.version_combobox_enable()
+                self._programmer_frame.local_fw_button_enable()
+                self._programmer_frame.online_fw_button_enable(
+                    self.network_error)
+
+                self._statusbar_frame.progress_bar_set_value(0)
+                self._statusbar_frame.status_label_set_text(
+                    "Update ELRS failed, repower and try again.", "red")
+            
+            elif my_ch341.status == ch341_status.RADIO_UPDATE_DONE.value:  # radio update done
+                my_ch341.status = ch341_status.IDLE.value
+
+                self.notebook_enable()
+
+                self._programmer_frame.update_button_set_text_update(
+                    "Radio")
+                self._programmer_frame.update_button_enable()
+                self._programmer_frame.detect_button_disable()
+                self._programmer_frame.version_combobox_enable()
+                self._programmer_frame.local_fw_button_enable()
+                self._programmer_frame.online_fw_button_enable(
+                    self.network_error)
+
+                self._statusbar_frame.progress_bar_set_value(100)
+                self._statusbar_frame.status_label_set_text(
+                    "Firmware updated, repower Radio now", "#06b025")
+
 
         self._main_window.after(100, self.refresh)
 

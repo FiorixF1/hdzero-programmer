@@ -41,7 +41,8 @@ vtx_list = ['foxeer_vtx',
             'hdzero_whoop',
             'hdzero_whoop_lite',
             'hdzero_eco',
-            'hdzero_aio5']
+            'hdzero_aio5',
+            'hdzero_aio15']
 
 version_list = ['1.0.0',
                 '1.1.0',
@@ -52,14 +53,15 @@ version_list = ['1.0.0',
                 '1.5.0-CITA',
                 '1.6.0',
                 '1.6.0-CITA',
-                '1.7.0']
+                '1.7.0',
+                '1.8.0-rc1']
 
 firmware_list = dict()
 
 for version in version_list:
     print(f"Version: {version}")
     for vtx in vtx_list:
-        ch341.fw_path = f"~/HDZero/Firmware/{version}/{vtx}/HDZERO_TX.bin"
+        ch341.fw_path = f"../Firmware/{version}/{vtx}/HDZERO_TX.bin"
         try:
             ch341.fw_full_size = os.path.getsize(ch341.fw_path)
         except:

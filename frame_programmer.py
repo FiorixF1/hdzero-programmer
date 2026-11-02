@@ -46,9 +46,8 @@ class frame_programmer:
         self.update_button_set_text_update("VTX")
         self.update_button_disable()
 
-        self.detect_button = tk.Button(self._frame)
+        self.detect_button = tk.Button(self._frame, text="Detect VTX")
         self.detect_button.grid(row=1, column=3, padx=5, pady=5)
-        self.detect_button["text"] = "Detect VTX"
         self.detect_button_disable()
 
     def frame(self):
@@ -163,7 +162,7 @@ class frame_programmer:
         self.is_cancel = 0
         self.update_button["text"] = "Flash " + string
 
-    def shorten_path(self, path, max_length=40):
+    def shorten_path(self, path, max_length=64):
         if len(path) <= max_length:
             return path
         else:

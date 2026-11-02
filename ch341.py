@@ -11,6 +11,9 @@ from global_var import *
 from ctypes import *
 import global_var
 import subprocess
+import zipfile
+import platform
+from program_radio import my_radio
 
 
 
@@ -84,13 +87,15 @@ class linux_driver(object):
     def load(self):
         try:
             self.dll = cdll.LoadLibrary(self.dll_name)
-        except:
-            print("Please check ch341 driver")
+        except Exception as e:
+            print(f"Error when loading CH341 driver: {e}")
 
     def open_device(self):
-        # Return first entry. The device number could be different on various systems.
-        device = glob.glob('/dev/ch34x_pis[0-9]*')[0]
-        self.iIndex = self.dll.CH34xOpenDevice(device.encode())
+        # Device numbering varies between systems; never index an empty list.
+        devices = glob.glob('/dev/ch34x_pis[0-9]*')
+        if not devices or self.dll is None:
+            return -1
+        self.iIndex = self.dll.CH34xOpenDevice(devices[0].encode())
         return self.iIndex
 
     def close_device(self):
@@ -243,6 +248,15 @@ class ch341_class(object):
                     return 0
         except:
             return 0
+
+    def parse_radio_fw(self, fw_path):
+        try:
+            with zipfile.ZipFile(fw_path, "r") as z:
+                z.extractall("resource/")
+            return 1
+        except:
+            return 0
+
 
     def ch341read_i2c(self, addr):
         self.dll_object.read_I2C(self.addr_fpga_device, addr, self.iobuffer)
@@ -780,5 +794,38 @@ def ch341_thread_proc():
             else:
                 my_ch341.write_event_vrx_fw_to_flash(my_ch341.fw_path)
                 my_ch341.status = ch341_status.EVENT_VRX_UPDATEDONE.value
+        # ---------------------- Radio ------------------------------------
+        elif my_ch341.status == ch341_status.RADIO_DISCONNECTED.value:  # connect radio
+            if my_radio.radio_is_active() != 0:
+                my_ch341.status = ch341_status.RADIO_CONNECTED.value
+        elif my_ch341.status == ch341_status.RADIO_UPDATE_ELRS_TX.value:  # update elrs tx
+            if my_ch341.parse_radio_fw(my_ch341.fw_path) == 0:
+                my_ch341.status = ch341_status.RADIO_FW_ERROR.value
+
+            my_ch341.fw_index = 1
+            my_ch341.update_error_flag = 0
+
+            if my_radio.program_elrs_tx() == False:
+                my_ch341.update_error_flag = 1
+            my_ch341.status = ch341_status.RADIO_UPDATE_ELRS_BACKPACK.value
+
+        elif my_ch341.status == ch341_status.RADIO_UPDATE_ELRS_BACKPACK.value:  # update elrs backpack
+            my_ch341.written_len = 400
+            my_ch341.fw_index = 2
+
+            if my_radio.program_elrs_backpack() == False:
+                my_ch341.update_error_flag += 2
+            my_ch341.status = ch341_status.RADIO_UPDATE_STM32.value
+
+        elif my_ch341.status == ch341_status.RADIO_UPDATE_STM32.value:  # update elrs backpack
+            my_ch341.written_len = 800
+            my_ch341.fw_index = 3
+            if my_radio.program_stm32() == False:
+                my_ch341.status = ch341_status.RADIO_UPDATE_STM32_FAILED.value
+            elif my_ch341.update_error_flag:
+                my_ch341.status = ch341_status.RADIO_UPDATE_ELRS_FAILED.value
+            else:
+                my_ch341.status = ch341_status.RADIO_UPDATE_DONE.value
+
         else:
             time.sleep(0.1)

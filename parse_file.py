@@ -9,14 +9,16 @@ class parse:
         self.vtx_common_path = "resource/vtx_common"
         self.event_vrx_releases_path = "resource/event_vrx_releases"
         self.monitor_releases_path = "resource/monitor_releases"
+        self.radio_releases_path = "resource/radio_releases"
         self.vtx_tragets_image_path = "resource/vtx_targets.png"
         self.crc_path = "resource/crc.json"
+        self.crc_database = {}
 
         self.vtx_info = {}
-        self.event_vrx_info = {}
         self.monitor_info = {}
+        self.event_vrx_info = {}
+        self.radio_info = {}
         self.vtx_target_image = []
-        self.crc_database = {}
 
     def parse_vtx_common(self):
         try:
@@ -141,13 +143,34 @@ class parse:
 
         return 1
 
-    def parse_crc_database(self):
+    def parse_radio_releases(self):
         try:
-            with open(self.crc_path, 'r') as f:
-                data = f.read()
-            self.crc_database = json.loads(data)
+            with open(self.radio_releases_path) as f:
+                data = json.load(f)
+
+            for i in range(len(data)):
+                link_list = []
+                for j in range(len(data[i]['assets'])):
+                    link_list.append(data[i]['assets'][j]
+                                     ['browser_download_url'])
+
+                    version = data[i]['tag_name']
+                    url = data[i]['assets'][j]['browser_download_url']
+                    self.radio_info[version] = url
             return 1
         except:
             return 0
+
+
+    def parse_crc_database(self):
+        try:
+            with open(self.crc_path, "r", encoding="utf-8") as f:
+                self.crc_database = json.load(f)
+            return 1
+        except (OSError, ValueError, TypeError) as exc:
+            print(f"Unable to load firmware CRC database: {exc}")
+            self.crc_database = {}
+            return 0
+
 
 my_parse = parse()
