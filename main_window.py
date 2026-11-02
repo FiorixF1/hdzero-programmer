@@ -221,6 +221,7 @@ class MyGUI:
             else:
                 my_ch341.status = ch341_status.IDLE.value
                 my_download.to_stop = 1
+                my_ch341.dll_object.close_device()
 
                 self.notebook_enable()
 
@@ -265,6 +266,7 @@ class MyGUI:
                 self.monitor_is_alive = 0
                 my_ch341.status = ch341_status.IDLE.value
                 my_download.to_stop = 1
+                my_ch341.dll_object.close_device()
 
                 self.notebook_enable()
 
@@ -366,16 +368,25 @@ class MyGUI:
     def on_detect(self):
         if self.current_selected_tab() != 0:
             return
-        if my_ch341.connect_vtx() == 1:
-            my_ch341.flash_read_file()
-            self._statusbar_frame.status_label_set_text(
-                *self.get_firmware_from_CRC(my_ch341.crc_table))
-        else:
-            self._statusbar_frame.status_label_set_text(
-                "VTX not found. Check connection", "red")
+        try:
+            if my_ch341.connect_vtx() == 1:
+                my_ch341.flash_read_file()
+                self._statusbar_frame.status_label_set_text(
+                    *self.get_firmware_from_CRC(my_ch341.crc_table))
+            else:
+                self._statusbar_frame.status_label_set_text(
+                    "VTX not found. Check connection", "red")
+        finally:
+            # Detect is a one-shot operation: release the native handle.
+            my_ch341.dll_object.close_device()
 
     def on_tab_changed(self, event):
         print("Selected tab:", self.current_selected_tab())
+        # A tab switch changes the hardware target. Do not carry a CH34x
+        # handle from VTX/Monitor into another workflow.
+        my_ch341.status = ch341_status.IDLE.value
+        my_ch341.monitor_connected = 0
+        my_ch341.dll_object.close_device()
         self._statusbar_frame.label_hidden()
         if self.current_selected_tab() == 0:
             self._programmer_frame.detect_button_enable()
@@ -535,6 +546,7 @@ class MyGUI:
             elif my_download.status == download_status.DOWNLOAD_VTX_FW_FAILED.value:
                 my_download.status = download_status.IDLE.value
                 my_ch341.status = ch341_status.IDLE.value
+                my_ch341.dll_object.close_device()
 
                 self.notebook_enable()
 
@@ -576,57 +588,43 @@ class MyGUI:
                 value = (my_ch341.written_len /
                          my_ch341.to_write_len * 100) % 101
                 self._statusbar_frame.progress_bar_set_value(value)
-            elif my_ch341.status == ch341_status.VTX_UPDATEDONE.value:  # vtx update done
-                self._statusbar_frame.progress_bar_set_value(100)
-                self._statusbar_frame.status_label_set_text(
-                    "Firmware updated. Connect another VTX (the same type) to update, or click cancel to finish.", "#06b025")
-                my_ch341.status = ch341_status.VTX_RECONNECT.value
-                self._programmer_frame.update_button_set_text_cancel()
-                self._programmer_frame.update_button_enable()
-                self._programmer_frame.detect_button_enable()
-
-                """
+            elif my_ch341.status == ch341_status.VTX_UPDATEDONE.value:
+                # Return to idle after flashing. The previous reconnect loop
+                # kept probing the same VTX and raced with Detect VTX.
                 my_ch341.status = ch341_status.IDLE.value
-
+                my_ch341.dll_object.close_device()
                 self.notebook_enable()
-
                 self._vtx_frame.radio_button_enable()
-
                 self._programmer_frame.version_combobox_enable()
-                self._programmer_frame.version_combobox_set_default()
-
+                self._programmer_frame.local_fw_button_enable()
                 self._programmer_frame.online_fw_button_enable(
                     self.network_error)
-                self._programmer_frame.online_fw_button_set_str_default()
-                self._programmer_frame.online_fw_button_show()
-
-                self._programmer_frame.local_fw_button_enable()
-                self._programmer_frame.local_fw_button_set_str_default()
-
                 self._programmer_frame.update_button_set_text_update("VTX")
-                # self._programmer_frame.update_button_disable()
-
-                self._statusbar_frame.progress_bar_set_value(100)
-                self._programmer_frame.deselect()
-                """
-            elif my_ch341.status == ch341_status.VTX_UPDATE_FAILED.value:  # vtx update failed
-                self._statusbar_frame.progress_bar_set_value(0)
-                self._statusbar_frame.status_label_set_text(
-                    "Firmware updated failed. Disconnect/reconnect the vtx to try again, or click cancel to finish.", "red")
-                my_ch341.status = ch341_status.VTX_RECONNECT.value
-                self._programmer_frame.update_button_set_text_cancel()
                 self._programmer_frame.update_button_enable()
                 self._programmer_frame.detect_button_enable()
+                self._statusbar_frame.progress_bar_set_value(100)
+                self._statusbar_frame.status_label_set_text(
+                    "Firmware updated. You can connect another VTX or detect the firmware.", "#06b025")
 
-            elif my_ch341.status == ch341_status.VTX_RECONNECTDONE.value:
-                my_ch341.status = ch341_status.VTX_UPDATE.value
-                self._programmer_frame.update_button_set_text_update("VTX")
-                self._programmer_frame.update_button_disable()
-                self._programmer_frame.detect_button_disable()
-                self._statusbar_frame.label_hidden()
-
-            elif my_ch341.status == ch341_status.VTX_FW_ERROR.value:  # vtx fw error
+            elif my_ch341.status == ch341_status.VTX_UPDATE_FAILED.value:
                 my_ch341.status = ch341_status.IDLE.value
+                my_ch341.dll_object.close_device()
+                self.notebook_enable()
+                self._vtx_frame.radio_button_enable()
+                self._programmer_frame.version_combobox_enable()
+                self._programmer_frame.local_fw_button_enable()
+                self._programmer_frame.online_fw_button_enable(
+                    self.network_error)
+                self._programmer_frame.update_button_set_text_update("VTX")
+                self._programmer_frame.update_button_enable()
+                self._programmer_frame.detect_button_enable()
+                self._statusbar_frame.progress_bar_set_value(0)
+                self._statusbar_frame.status_label_set_text(
+                    "Firmware update failed. Check the connection and try again.", "red")
+
+            elif my_ch341.status == ch341_status.VTX_FW_ERROR.value:
+                my_ch341.status = ch341_status.IDLE.value
+                my_ch341.dll_object.close_device()
 
                 self.notebook_enable()
 

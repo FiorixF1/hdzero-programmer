@@ -22,6 +22,7 @@ class windows_driver(object):
         self.dll = None
         self.dll_name = "resource\\driver\\CH341DLL.DLL"
         self.iIndex = 0
+        self.is_open = False
 
     def load(self):
         try:
@@ -35,14 +36,21 @@ class windows_driver(object):
             time.sleep(1)
             try:
                 self.dll = ctypes.WinDLL(self.dll_name)
-            except:
-                a = 1
+            except Exception as e:
+                print(f"Error when loading CH341 driver: {e}")
 
     def open_device(self):
-        return self.dll.CH341OpenDevice(self.iIndex)
+        if self.is_open:
+            return self.iIndex
+        result = self.dll.CH341OpenDevice(self.iIndex)
+        if result >= 0:
+            self.is_open = True
+        return result
 
     def close_device(self):
-        self.dll.CH341CloseDevice(self.iIndex)
+        if self.is_open and self.dll is not None:
+            self.dll.CH341CloseDevice(self.iIndex)
+        self.is_open = False
 
     def get_version(self):
         return self.dll.CH341GetVersion()
@@ -82,6 +90,7 @@ class linux_driver(object):
         self.dll = None
         self.dll_name = "./resource/driver/libch347.so"
         self.iIndex = 0
+        self.is_open = False
         self.i2c_buf = create_string_buffer(4)
 
     def load(self):
@@ -91,15 +100,22 @@ class linux_driver(object):
             print(f"Error when loading CH341 driver: {e}")
 
     def open_device(self):
-        # Device numbering varies between systems; never index an empty list.
-        devices = glob.glob('/dev/ch34x_pis[0-9]*')
+        # Keep one native handle per driver instance.
+        if self.is_open:
+            return self.iIndex
+        devices = sorted(glob.glob('/dev/ch34x_pis[0-9]*'))
         if not devices or self.dll is None:
             return -1
-        self.iIndex = self.dll.CH34xOpenDevice(devices[0].encode())
-        return self.iIndex
+        result = self.dll.CH34xOpenDevice(devices[0].encode())
+        if result >= 0:
+            self.iIndex = result
+            self.is_open = True
+        return result
 
     def close_device(self):
-        self.dll.CH34xCloseDevice(self.iIndex)
+        if self.is_open and self.dll is not None:
+            self.dll.CH34xCloseDevice(self.iIndex)
+        self.is_open = False
 
     def get_version(self):
         return self.dll.CH34xGetVersion()
@@ -160,8 +176,6 @@ class ch341_class(object):
         self.target = -1
         self.status = ch341_status.IDLE.value        # idle
         self.read_setting_flag = 1
-
-        self.reconnect_vtx = 0
 
         # ------ monitor -------------
         self.addr_brightness = 0x22
@@ -461,22 +475,25 @@ class ch341_class(object):
     def connect_vtx(self):
         if self.dll_object.open_device() < 0:
             return 0
-        else:
-            # needed on Linux
-            if self.dll_object.get_chip_version() == 0:
-                return 0
 
-            self.flash_switch0()
-            flash_id_0 = self.flash_read_id()
-            self.flash_switch1()
-            flash_id_1 = self.flash_read_id()
-            self.flash_switch2()
-            flash_id_2 = self.flash_read_id()
-            if flash_id_0 == flash_id_1 and flash_id_1 == flash_id_2:
-                if flash_id_0 == 0xEF4014 or flash_id_0 == 0x5E6014:
-                    return 1
-
+        # Keep the handle open on success for the following flash operation.
+        # Release it on every failed probe so a later Detect can retry.
+        if self.dll_object.get_chip_version() == 0:
+            self.dll_object.close_device()
             return 0
+
+        self.flash_switch0()
+        flash_id_0 = self.flash_read_id()
+        self.flash_switch1()
+        flash_id_1 = self.flash_read_id()
+        self.flash_switch2()
+        flash_id_2 = self.flash_read_id()
+        if (flash_id_0 == flash_id_1 == flash_id_2 and
+                flash_id_0 in (0xEF4014, 0x5E6014)):
+            return 1
+
+        self.dll_object.close_device()
+        return 0
 
     def flash_read_target_id(self):
         raddr = 0x10000
@@ -526,19 +543,23 @@ class ch341_class(object):
 
     def connect_monitor(self, sleep_sec):
         if self.dll_object.open_device() < 0:
+            print("Monitor probe: unable to open CH34x device")
             return 0
-        else:
-            # needed on Linux
-            if self.dll_object.get_chip_version() == 0:
-                return 0
-            # self.dll.CH341SetStream(0, 0x82)
-            time.sleep(sleep_sec)
-            self.flash_switch1()
-            flash_id_2 = self.flash_read_id()
-            if flash_id_2 == 0xEF4018:
-                return 1
-            else:
-                return 0
+
+        if self.dll_object.get_chip_version() == 0:
+            print("Monitor probe: CH34x chip version check failed")
+            self.dll_object.close_device()
+            return 0
+
+        time.sleep(sleep_sec)
+        self.flash_switch1()
+        flash_id = self.flash_read_id()
+        if flash_id == 0xEF4018:
+            return 1
+
+        print(f"Monitor not detected: SPI flash ID 0x{flash_id:06X} (expected 0xEF4018)")
+        self.dll_object.close_device()
+        return 0
 
     def fw_write_to_flash(self, fw_buf, fw_size):
         page_number = (fw_size + (1 << 8) - 1) >> 8
@@ -721,57 +742,80 @@ def ch341_thread_proc():
         if my_ch341.status == ch341_status.VTX_DISCONNECTED.value:  # connect vtx
             if my_ch341.connect_vtx() == 1:
                 my_ch341.status = ch341_status.VTX_CONNECTED.value
-
-        elif my_ch341.status == ch341_status.VTX_UPDATE.value:  # update vtx
-            my_ch341.written_len = 0
-            my_ch341.to_write_len = os.path.getsize(my_ch341.fw_path)
-
-            if my_ch341.to_write_len == 0 or my_ch341.to_write_len >= 65536:  # check fw size
-                my_ch341.status = ch341_status.VTX_FW_ERROR.value
             else:
-                my_ch341.flash_erase_vtx()
-                my_ch341.flash_write_target_id()
-                if my_ch341.flash_write_fw() == 1:
-                    my_ch341.status = ch341_status.VTX_UPDATEDONE.value
-                else:
+                time.sleep(0.1)
+
+        elif my_ch341.status == ch341_status.VTX_UPDATE.value:
+            my_ch341.written_len = 0
+            try:
+                my_ch341.to_write_len = os.path.getsize(my_ch341.fw_path)
+                if my_ch341.to_write_len == 0 or my_ch341.to_write_len >= 65536:
+                    my_ch341.status = ch341_status.VTX_FW_ERROR.value
+                elif my_ch341.dll_object.open_device() < 0:
                     my_ch341.status = ch341_status.VTX_UPDATE_FAILED.value
-                my_ch341.reconnect_vtx = 0
-        elif my_ch341.status == ch341_status.VTX_RECONNECT.value:  # reconnect vtx
-            if my_ch341.reconnect_vtx == 0:
-                if my_ch341.connect_vtx() == 0:
-                    my_ch341.reconnect_vtx = 1
-            elif my_ch341.reconnect_vtx == 1:
-                if my_ch341.connect_vtx() == 1:
-                    my_ch341.reconnect_vtx = 0
-                    my_ch341.status = ch341_status.VTX_RECONNECTDONE.value
+                else:
+                    my_ch341.flash_erase_vtx()
+                    my_ch341.flash_write_target_id()
+                    if my_ch341.flash_write_fw() == 1:
+                        my_ch341.status = ch341_status.VTX_UPDATEDONE.value
+                    else:
+                        my_ch341.status = ch341_status.VTX_UPDATE_FAILED.value
+            except Exception as exc:
+                print(f"VTX flash failed: {exc}")
+                my_ch341.status = ch341_status.VTX_UPDATE_FAILED.value
+            finally:
+                my_ch341.dll_object.close_device()
 
         # -------- Monitor -----------------
-        elif my_ch341.status == ch341_status.MONITOR_CHECK_ALIVE.value:  # check monitor is alive
-            if my_ch341.connect_monitor(0.35) == 1:
-                if my_ch341.monitor_connected == 0:
+        elif my_ch341.status == ch341_status.MONITOR_CHECK_ALIVE.value:
+            # Probe only while disconnected. Avoid repeatedly opening and
+            # interrogating an already connected CH34x device.
+            if my_ch341.monitor_connected == 0:
+                if my_ch341.connect_monitor(0.35) == 1:
+                    try:
+                        time.sleep(0.5)
+                        my_ch341.read_setting()
+                        my_ch341.monitor_connected = 1
+                    except Exception as exc:
+                        print(f"Monitor initialization failed: {exc}")
+                        my_ch341.monitor_connected = 0
+                        my_ch341.dll_object.close_device()
+                else:
                     time.sleep(0.5)
-                    my_ch341.read_setting()
-                    my_ch341.monitor_connected = 1
             else:
-                my_ch341.monitor_connected = 0
+                time.sleep(0.1)
 
-        elif my_ch341.status == ch341_status.MONITOR_UPDATE.value:  # update monitor
-            # check fw size
-            if my_ch341.parse_monitor_fw(my_ch341.fw_path) == 0:
+        elif my_ch341.status == ch341_status.MONITOR_UPDATE.value:
+            monitor_flash_started = False
+            try:
+                if my_ch341.parse_monitor_fw(my_ch341.fw_path) == 0:
+                    my_ch341.status = ch341_status.MONITOR_FW_ERROR.value
+                elif my_ch341.dll_object.open_device() < 0:
+                    my_ch341.status = ch341_status.MONITOR_FW_ERROR.value
+                else:
+                    monitor_flash_started = True
+                    my_ch341.flash_switch0()
+                    my_ch341.fw_write_to_flash(
+                        my_ch341.fw_5680_buf, my_ch341.fw_5680_size)
+                    my_ch341.flash_switch1()
+                    my_ch341.fw_write_to_flash(
+                        my_ch341.fw_fpga_buf, my_ch341.fw_fpga_size)
+                    my_ch341.flash_switch2()
+                    my_ch341.fw_write_to_flash(
+                        my_ch341.fw_8339_buf, my_ch341.fw_8339_size)
+                    my_ch341.status = ch341_status.MONITOR_UPDATEDONE.value
+            except Exception as exc:
+                print(f"Monitor flash failed: {exc}")
                 my_ch341.status = ch341_status.MONITOR_FW_ERROR.value
-            else:
-                my_ch341.flash_switch0()
-                my_ch341.fw_write_to_flash(
-                    my_ch341.fw_5680_buf, my_ch341.fw_5680_size)
-                my_ch341.flash_switch1()
-                my_ch341.fw_write_to_flash(
-                    my_ch341.fw_fpga_buf, my_ch341.fw_fpga_size)
-                my_ch341.flash_switch2()
-                my_ch341.fw_write_to_flash(
-                    my_ch341.fw_8339_buf, my_ch341.fw_8339_size)
+            finally:
+                # Release the selected flash before closing the CH34x handle.
+                if monitor_flash_started and getattr(my_ch341.dll_object, "is_open", False):
+                    try:
+                        my_ch341.flash_release()
+                    except Exception as exc:
+                        print(f"Monitor flash release failed: {exc}")
                 my_ch341.dll_object.close_device()
-                my_ch341.flash_release()
-                my_ch341.status = ch341_status.MONITOR_UPDATEDONE.value
+                my_ch341.monitor_connected = 0
 
         # ---------------------- event_vrx ------------------------------------
         elif my_ch341.status == ch341_status.EVENT_VRX_DISCONNECTED.value:  # connect event vrx
