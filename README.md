@@ -40,10 +40,12 @@ cd -
 ```
 
 #### Apply ch341 driver permissions
-- Note: something similar could potentially be perform with udev rules as well.
-In my machine it worked with
+- Note: something similar could potentially be perform with udev rules as well. In my machine it worked with
+```
 sudo nano /etc/udev/rules.d/99-ch34x-pis.rules
 SUBSYSTEM=="usbmisc", KERNEL=="ch34x_pis*", MODE="0666"
+```
+
 - Plugin the hdzero-programmer dongle first (ID 1a86:5512 QinHeng Electronics CH341 in EPP/MEM/I2C mode, EPP/I2C adapter), then
 ```
 # sometimes the device shows up as 0, 1, or some other number. Chmod all of them.
